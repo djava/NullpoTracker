@@ -83,4 +83,7 @@ def parseReplay(path):
                  re.findall(r'(timestamp.date=)(.*)',
                             ' '.join(replayData))[0][1].split(r'/')
                  ]
-    timestamp = datetime.datetime()
+    timestamp = datetime.datetime(
+        timestamp[1][0], timestamp[1][1], timestamp[1][2],
+        hour=timestamp[0][0], minute=timestamp[0][1]
+                      )
