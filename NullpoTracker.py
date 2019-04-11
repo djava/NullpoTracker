@@ -7,6 +7,8 @@ import datetime
 import json
 import sqlite3
 
+database = sqlite3.connect('./NullpoTracker.db')
+
 
 def isNullpo():
     '''
@@ -51,31 +53,52 @@ def isNullpo():
 
 
 def loopIsNullpo():
-    ''''''
-    Active = isNullpo()
-    while not Active:
+    '''
+    Loops until Nullpo is active
+    '''
+
+    wasActive = False
+    active = isNullpo()
+
+    # Until nullpo is running
+    while not active:
+
         time.sleep(3)
-        Active = isNullpo()
+        active = isNullpo()
+
+        # This will evantually be replaced with something better
         print('not active')
-    else:
+
+    else:  # When nullpo is active
+        # This will evantually be replaced with something better
         print('Nullpo is active')
 
-
-database = sqlite3.connect('./NullpoTracker.db')
+        wasActive = True
 
 
 def parseReplay(path):
+    '''
+    Runs through a .rep file (nullpo replays)
+    and finds all the important data
+    '''
+
+    # Saves the replay data into a variable as a list
     with open(path) as replay:
         replayData = replay.readlines()
 
-    replayStats = [i for i in replayData if i.startswith('0.statistics.')]
+    # Finds all the statistics in replayData, uses regex to
+    # remove the 0.statistics and the \n's
+    #       |-----0.statistics or \n-----|
+    stats = [re.sub(r'0\.statistics\.|\n', '', i)
+             for i in replayData if i.startswith('0.statistics.')]
 
-    for i in range(len(replayStats)):
-        replayStats[i] = re.sub(r'0\.statistics\.|\n', r'', replayStats[i])
+    # Convert into a dict, split by the equals sign
+    #        |-Name of stat-| |----Value of stat---|
+    stats = {i.split('=')[0]: float(i.split('=')[1])
+             for i in stats}
 
-    replayStats = {i.split('=')[0]: float(i.split('=')[1])
-                   for i in replayStats}
-
+    # Finds the name of the mode, index gets group 2, which is the mode name
+    #                |---Find the mode---| |Joins replayData list|
     mode = re.findall(r'(name\.mode=)(.*)', ' '.join(replayData))[0][1]
 
     timestamp = [re.findall(r'(timestamp.time=)(.*)',
@@ -86,4 +109,6 @@ def parseReplay(path):
     timestamp = datetime.datetime(
         timestamp[1][0], timestamp[1][1], timestamp[1][2],
         hour=timestamp[0][0], minute=timestamp[0][1]
-                      )
+    )
+
+    return (stats, mode, timestamp)
