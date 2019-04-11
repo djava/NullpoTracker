@@ -1,13 +1,27 @@
+# TODO (order of short-termedness):
+# 1. Check for new files better
+# 2. Sort data for output
+# 3. Add a console output system
+# 4. Add an electron good-looking output app
+
+
+from win32 import win32gui
+from win32 import win32process
 import os
 import re
 import time
-from win32 import win32gui
-from win32 import win32process
 import datetime
-import json
 import sqlite3
+import configparser
 
-database = sqlite3.connect('./NullpoTracker.db')
+
+DB = sqlite3.connect('NullpoTracker.db')
+CONFIG = configparser.ConfigParser()
+CONFIG.read('CONFIG.ini')
+with open('./ignoreReps.txt') as iR:
+    IGNOREREPS = iR.read().split('\n')
+with open('./ignoreModes.txt') as iM:
+    IGNOREMODES = iM.read().split('\n')
 
 
 def isNullpo():
@@ -20,8 +34,8 @@ def isNullpo():
     Compares that against a dictionary of parsed tasklist data
     If currentPid is the same as the pid for javaw.exe (Nullpo), return True
 
-    Will produce a false positive if you use other
-    applications that run as javaw.exe
+    Will produce a false positive if you use other applications
+    that run as javaw.exe, IDK how to fix that
     '''
 #                |------Converts a HWND to a PID------|
     currentPid = win32process.GetWindowThreadProcessId(
@@ -57,23 +71,23 @@ def loopIsNullpo():
     Loops until Nullpo is active
     '''
 
-    wasActive = False
-    active = isNullpo()
+    global CONFIG
 
     # Until nullpo is running
-    while not active:
+    while not isNullpo():
 
-        time.sleep(3)
-        active = isNullpo()
+        # Checks for nullpo as often as specified in CONFIG.ini
+        time.sleep(CONFIG['RUNNING']['checkDelay'])
 
-        # This will evantually be replaced with something better
-        print('not active')
+    else:  # When nullpo is active,
 
-    else:  # When nullpo is active
-        # This will evantually be replaced with something better
-        print('Nullpo is active')
-
-        wasActive = True
+        startTime = datetime.datetime.now()
+        while isNullpo():
+            time.sleep(CONFIG['RUNNING']['checkDelay'])
+        else:
+            print('Nullpo was closed')
+            findReplays(startTime)
+            loopIsNullpo()
 
 
 def parseReplay(path):
@@ -101,14 +115,50 @@ def parseReplay(path):
     #                |---Find the mode---| |Joins replayData list|
     mode = re.findall(r'(name\.mode=)(.*)', ' '.join(replayData))[0][1]
 
-    timestamp = [re.findall(r'(timestamp.time=)(.*)',
-                            ' '.join(replayData))[0][1].split(r'\:'),
-                 re.findall(r'(timestamp.date=)(.*)',
-                            ' '.join(replayData))[0][1].split(r'/')
-                 ]
-    timestamp = datetime.datetime(
-        timestamp[1][0], timestamp[1][1], timestamp[1][2],
-        hour=timestamp[0][0], minute=timestamp[0][1]
-    )
+    # timestamp = [re.findall(r'(timestamp.time=)(.*)',
+    #                         ' '.join(replayData))[0][1].split(r'\:'),
+    #              re.findall(r'(timestamp.date=)(.*)',
+    #                         ' '.join(replayData))[0][1].split(r'/')
+    #              ]
+    # timestamp = datetime.datetime(
+    #     int(timestamp[1][0]), int(timestamp[1][1]), int(timestamp[1][2]),
+    #     hour=int(timestamp[0][0]), minute=int(timestamp[0][1])
+    # )
 
     return (stats, mode, timestamp)
+
+
+def findReplays(*startTime):
+
+    global CONFIG, DB, IGNOREREPS, IGNOREMODES
+
+    REPLAY_PATH = CONFIG['SETUP']['nullpoPath'] + '\\replay\\'
+    GAMES_TRACKED = DB.execute('SELECT fileName FROM GamesTracked').fetchall()
+
+    filesInReplay = os.listdir(REPLAY_PATH)
+
+    newReplays = []
+
+    for rep in filesInReplay:
+        if rep not in GAMES_TRACKED and rep not in GAMES_TRACKED:
+            replayData = parseReplay(REPLAY_PATH + rep)
+            if replayData[1] not in IGNOREMODES:
+                insertIntoDB(replayData, rep, False)
+
+    DB.commit()
+
+
+def insertIntoDB(replayData, repName, commit):
+    global DB, IGNOREMODES
+
+    if replayData[1] not in IGNOREMODES:
+        DB.execute('INSERT INTO GamesTracked\
+        (fileName, time, PPS, mode, score, timeStamp)\
+            VALUES ({})'.format(
+            (repName, replayData[0]['time'],
+             replayData[0]['pps'], replayData[1],
+             replayData[0]['score'], repName[:-4].replace('_', '-'))
+        ))
+
+    if commit:
+        DB.commit()
