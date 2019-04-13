@@ -1,7 +1,7 @@
 # TODO (order of short-termedness):
-# 1. Check for new files better
-# 2. Sort data for output
-# 3. Add a console output system
+# 1. Sort data for output
+# 2. Add a console output system
+# 3. Check for new files better (Current is very inefficient)
 # 4. Add an electron good-looking output app
 
 
@@ -13,18 +13,89 @@ import time
 import datetime
 import sqlite3
 import configparser
+import pickle
 
 
 DB = sqlite3.connect('NullpoTracker.db')
+
 CONFIG = configparser.ConfigParser()
 CONFIG.read('CONFIG.ini')
+
+REPLAY_PATH = CONFIG['SETUP']['nullpoPath'] + '/replay/'
+
 with open('./ignoreReps.txt') as iR:
-    IGNOREREPS = iR.read().split('\n')
+    IGNORE_REPS = iR.read().split('\n')
 with open('./ignoreModes.txt') as iM:
-    IGNOREMODES = iM.read().split('\n')
+    IGNORE_MODES = iM.read().split('\n')
+
+OPEN_TIME = datetime.datetime.now() + datetime.timedelta(hours=4)
+with open('lastTimeOpenedDT.pickle', 'rb+') as lTO:
+    try:
+        LAST_TIME_OPENED = pickle.load(lTO)
+    except EOFError:
+        LAST_TIME_OPENED = datetime.datetime(1970, 1, 1)
+with open('lastTimeOpenedDT.pickle', 'rb+') as lTO:
+    pickle.dump(OPEN_TIME, lTO, pickle.HIGHEST_PROTOCOL)
 
 
-def isNullpo():
+def modTime(path, *includeReplayPath):
+    global REPLAY_PATH
+    if includeReplayPath:
+        return datetime.datetime(1970, 1, 1) + datetime.timedelta(
+            seconds=(os.path.getmtime(REPLAY_PATH + path)))
+
+    else:
+        return datetime.datetime(1970, 1, 1) + datetime.timedelta(
+            seconds=(os.path.getmtime(path)))
+
+
+def checkAndHandleIgnores(new):
+    global LAST_TIME_OPENED, IGNORE_MODES, IGNORE_REPS, DB
+
+    modIgnoreModes = modTime('./ignoreModes.txt') > LAST_TIME_OPENED
+    modIgnoreReps = modTime('./ignoreReps.txt') > LAST_TIME_OPENED
+
+    if modIgnoreModes and new:
+        for mode in IGNORE_MODES:
+            DB.execute('UPDATE GamesTracked\
+                        SET time=NULL,\
+                            PPS=NULL,\
+                            mode=NULL,\
+                            score=NULL,\
+                            ignore=1\
+                        WHERE mode={};'.format(mode))
+
+    if modIgnoreReps and new:
+        for rep in IGNORE_REPS:
+            DB.execute('UPDATE GamesTracked\
+                        SET time=NULL,\
+                            PPS=NULL,\
+                            mode=NULL,\
+                            score=NULL,\
+                            ignore=1\
+                        WHERE fileName={};'.format(rep))
+
+    if not new:
+        for mode in IGNORE_MODES:
+            DB.execute('UPDATE GamesTracked\
+                        SET time=NULL,\
+                            PPS=NULL,\
+                            mode=NULL,\
+                            score=NULL,\
+                            ignore=1\
+                        WHERE mode={};'.format(mode))
+        for rep in IGNORE_REPS:
+            DB.execute('UPDATE GamesTracked\
+                        SET time=NULL,\
+                            PPS=NULL,\
+                            mode=NULL,\
+                            score=NULL,\
+                            ignore=1\
+                        WHERE fileName={};'.format(rep))
+    DB.commit()
+
+
+def isNullpo(Active=True):
     '''
     Returns true if the current active window is Nullpo, false if it's not
 
@@ -57,9 +128,11 @@ def isNullpo():
     # If nullpo is open,
     if 'javaw.exe' in tasklist.keys():
 
-        # If nullpo is the current window, return true
-        # (sub-listed to prevent IndexErrors)
-        if tasklist['javaw.exe'] == currentPid:
+        if Active and tasklist['javaw.exe'] == currentPid:
+            # If nullpo is the current window, return true
+            # (sub-listed to prevent IndexErrors)
+            return True
+        elif not Active:
             return True
 
     # Return false if either one is false
@@ -75,29 +148,31 @@ def loopIsNullpo():
 
     # Until nullpo is running
     while not isNullpo():
-
+        print('looking for nullpo')
         # Checks for nullpo as often as specified in CONFIG.ini
-        time.sleep(CONFIG['RUNNING']['checkDelay'])
+        time.sleep(int(CONFIG['RUNNING']['checkDelay']))
 
     else:  # When nullpo is active,
-
+        print('Nullpo Started')
         startTime = datetime.datetime.now()
-        while isNullpo():
-            time.sleep(CONFIG['RUNNING']['checkDelay'])
+        while isNullpo(Active=False):
+            time.sleep(int(CONFIG['RUNNING']['checkDelay']))
         else:
-            print('Nullpo was closed')
-            findReplays(startTime)
+            print('Nullpo Closed')
+            findReplays(startTime=startTime)
             loopIsNullpo()
 
 
-def parseReplay(path):
+def parseReplay(name):
     '''
     Runs through a .rep file (nullpo replays)
     and finds all the important data
     '''
 
+    global REPLAY_PATH
+
     # Saves the replay data into a variable as a list
-    with open(path) as replay:
+    with open(REPLAY_PATH + name) as replay:
         replayData = replay.readlines()
 
     # Finds all the statistics in replayData, uses regex to
@@ -115,50 +190,71 @@ def parseReplay(path):
     #                |---Find the mode---| |Joins replayData list|
     mode = re.findall(r'(name\.mode=)(.*)', ' '.join(replayData))[0][1]
 
-    # timestamp = [re.findall(r'(timestamp.time=)(.*)',
-    #                         ' '.join(replayData))[0][1].split(r'\:'),
-    #              re.findall(r'(timestamp.date=)(.*)',
-    #                         ' '.join(replayData))[0][1].split(r'/')
-    #              ]
-    # timestamp = datetime.datetime(
-    #     int(timestamp[1][0]), int(timestamp[1][1]), int(timestamp[1][2]),
-    #     hour=int(timestamp[0][0]), minute=int(timestamp[0][1])
-    # )
+    if mode == 'LINE RACE':
+        GOAL_DICT = {10: 10, 11: 10, 12: 10, 13: 10,
+                     20: 20, 21: 20, 22: 20, 23: 20,
+                     40: 40, 41: 40, 42: 40, 43: 40,
+                     100: 100, 101: 100, 102: 100, 103: 100}
 
-    return (stats, mode, timestamp)
+        goal = GOAL_DICT[stats['lines']]
+    else:
+        goal = None
+
+    timeStamp = (f'{name[:4]}-{name[5:7]}-{name[8:10]} ' +
+                 f'{name[11:13]}-{name[14:16]}-{name[17:19]}')
+
+    return (stats, mode, goal, timeStamp)
 
 
-def findReplays(*startTime):
+def findReplays(startTime=None):
 
-    global CONFIG, DB, IGNOREREPS, IGNOREMODES
-
-    REPLAY_PATH = CONFIG['SETUP']['nullpoPath'] + '\\replay\\'
-    GAMES_TRACKED = DB.execute('SELECT fileName FROM GamesTracked').fetchall()
+    global CONFIG, DB, IGNORE_REPS, IGNORE_MODES, REPLAY_PATH
 
     filesInReplay = os.listdir(REPLAY_PATH)
 
     newReplays = []
-
-    for rep in filesInReplay:
-        if rep not in GAMES_TRACKED and rep not in GAMES_TRACKED:
-            replayData = parseReplay(REPLAY_PATH + rep)
-            if replayData[1] not in IGNOREMODES:
-                insertIntoDB(replayData, rep, False)
+    if not startTime:
+        GAMES_TRACKED = [i + '.rep' for i in DB.execute(
+            'SELECT fileName FROM GamesTracked').fetchall()]
+        for rep in filesInReplay:
+            if rep not in GAMES_TRACKED:
+                replayData = parseReplay(rep)
+                insertIntoDB(replayData, rep)
+    else:
+        for rep in filesInReplay:
+            if modTime(rep, True) > startTime:
+                print(f'Inserting {rep}, os.mtime = {modTime(rep, True)}\
+, current time = {datetime.datetime.now()}')
+                insertIntoDB(parseReplay(rep), rep)
 
     DB.commit()
 
 
-def insertIntoDB(replayData, repName, commit):
-    global DB, IGNOREMODES
+def insertIntoDB(replayData, repName, commit=False):
+    global DB
 
-    if replayData[1] not in IGNOREMODES:
-        DB.execute('INSERT INTO GamesTracked\
-        (fileName, time, PPS, mode, score, timeStamp)\
-            VALUES ({})'.format(
-            (repName, replayData[0]['time'],
-             replayData[0]['pps'], replayData[1],
-             replayData[0]['score'], repName[:-4].replace('_', '-'))
-        ))
+    print(f'DB inserting {replayData[1]}, PPS {replayData[0]["pps"]} and ' +
+          f'time {replayData[0]["time"]}')
+
+    if replayData[2]:
+        DB.execute("INSERT INTO GamesTracked" +
+                   "(fileName,time,PPS,mode,score,goal,timeStamp)" +
+                   "VALUES ('{}', {}, {}, '{}', {}, {}, '{}');".format(
+                       repName, replayData[0]['time'], replayData[0]['pps'],
+                       replayData[1], replayData[0]['score'],
+                       replayData[2], replayData[3]
+                   ))
+    else:
+        DB.execute("INSERT OR IGNORE INTO GamesTracked " +
+                   "(fileName,time,PPS,mode,score,timeStamp) " +
+                   "VALUES ('{}', {}, {}, '{}', {}, '{}');".format(
+                       repName, replayData[0]['time'], replayData[0]['pps'],
+                       replayData[1], replayData[0]['score'], replayData[3]
+                   ))
 
     if commit:
+        print('committed')
         DB.commit()
+
+
+loopIsNullpo()
