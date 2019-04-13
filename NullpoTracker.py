@@ -14,6 +14,8 @@ import datetime
 import sqlite3
 import configparser
 import pickle
+from timezones import CURRENT_TIMEZONE as TIMEZONE
+from timezones import UTC
 
 
 DB = sqlite3.connect('NullpoTracker.db')
@@ -28,7 +30,7 @@ with open('./ignoreReps.txt') as iR:
 with open('./ignoreModes.txt') as iM:
     IGNORE_MODES = iM.read().split('\n')
 
-OPEN_TIME = datetime.datetime.now() + datetime.timedelta(hours=4)
+OPEN_TIME = datetime.datetime.now(tz=TIMEZONE)
 with open('lastTimeOpenedDT.pickle', 'rb+') as lTO:
     try:
         LAST_TIME_OPENED = pickle.load(lTO)
@@ -39,9 +41,9 @@ with open('lastTimeOpenedDT.pickle', 'rb+') as lTO:
 
 
 def modTime(path, *includeReplayPath):
-    global REPLAY_PATH
+    global REPLAY_PATH, UTC
     if includeReplayPath:
-        return datetime.datetime(1970, 1, 1) + datetime.timedelta(
+        return datetime.datetime(1970, 1, 1, tzinfo=UTC) + datetime.timedelta(
             seconds=(os.path.getmtime(REPLAY_PATH + path)))
 
     else:
@@ -144,19 +146,21 @@ def loopIsNullpo():
     Loops until Nullpo is active
     '''
 
-    global CONFIG
+    global CONFIG, TIMEZONE
 
     # Until nullpo is running
     while not isNullpo():
         print('looking for nullpo')
         # Checks for nullpo as often as specified in CONFIG.ini
-        time.sleep(int(CONFIG['RUNNING']['checkDelay']))
+        time.sleep(int(CONFIG['RUNTIME']['checkDelay']))
 
     else:  # When nullpo is active,
         print('Nullpo Started')
-        startTime = datetime.datetime.now()
+
+        startTime = datetime.datetime.now(tz=TIMEZONE)
+
         while isNullpo(Active=False):
-            time.sleep(int(CONFIG['RUNNING']['checkDelay']))
+            time.sleep(int(CONFIG['RUNTIME']['checkDelay']))
         else:
             print('Nullpo Closed')
             findReplays(startTime=startTime)
@@ -224,7 +228,7 @@ def findReplays(startTime=None):
         for rep in filesInReplay:
             if modTime(rep, True) > startTime:
                 print(f'Inserting {rep}, os.mtime = {modTime(rep, True)}\
-, current time = {datetime.datetime.now()}')
+, start time = {startTime}')
                 insertIntoDB(parseReplay(rep), rep)
 
     DB.commit()
