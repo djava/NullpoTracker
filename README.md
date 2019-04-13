@@ -2,4 +2,4 @@
 
 Can track Nullpomino games and find averages
 
-VERY VERY VERY VERY WIP
+Currently works but has no way to output data except looking at the sql database

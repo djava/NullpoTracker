@@ -1,8 +1,7 @@
 # TODO (order of short-termedness):
-# 1. Sort data for output
-# 2. Add a console output system
-# 3. Check for new files better (Current is very inefficient)
-# 4. Add an electron good-looking output app
+# 1. Add a console output system
+# 2. Check for new files better (Current is very inefficient)
+# 3. Add an electron good-looking output app
 
 
 from win32 import win32gui
@@ -47,53 +46,36 @@ def modTime(path, *includeReplayPath):
             seconds=(os.path.getmtime(REPLAY_PATH + path)))
 
     else:
-        return datetime.datetime(1970, 1, 1) + datetime.timedelta(
+        return datetime.datetime(1970, 1, 1, tzinfo=UTC) + datetime.timedelta(
             seconds=(os.path.getmtime(path)))
 
 
-def checkAndHandleIgnores(new):
+def checkAndHandleIgnores():
     global LAST_TIME_OPENED, IGNORE_MODES, IGNORE_REPS, DB
+    time.sleep(2)
 
-    modIgnoreModes = modTime('./ignoreModes.txt') > LAST_TIME_OPENED
     modIgnoreReps = modTime('./ignoreReps.txt') > LAST_TIME_OPENED
 
-    if modIgnoreModes and new:
-        for mode in IGNORE_MODES:
-            DB.execute('UPDATE GamesTracked\
-                        SET time=NULL,\
-                            PPS=NULL,\
-                            mode=NULL,\
-                            score=NULL,\
-                            ignore=1\
-                        WHERE mode={};'.format(mode))
-
-    if modIgnoreReps and new:
+    if modIgnoreReps:
         for rep in IGNORE_REPS:
-            DB.execute('UPDATE GamesTracked\
+            DB.execute(f"UPDATE GamesTracked\
                         SET time=NULL,\
                             PPS=NULL,\
                             mode=NULL,\
                             score=NULL,\
                             ignore=1\
-                        WHERE fileName={};'.format(rep))
+                        WHERE fileName='{rep}'';")
 
-    if not new:
+    if IGNORE_MODES != ['']:
         for mode in IGNORE_MODES:
-            DB.execute('UPDATE GamesTracked\
+            DB.execute(f"UPDATE GamesTracked\
                         SET time=NULL,\
                             PPS=NULL,\
                             mode=NULL,\
                             score=NULL,\
                             ignore=1\
-                        WHERE mode={};'.format(mode))
-        for rep in IGNORE_REPS:
-            DB.execute('UPDATE GamesTracked\
-                        SET time=NULL,\
-                            PPS=NULL,\
-                            mode=NULL,\
-                            score=NULL,\
-                            ignore=1\
-                        WHERE fileName={};'.format(rep))
+                        WHERE mode='{mode}';")
+
     DB.commit()
 
 
@@ -260,5 +242,5 @@ def insertIntoDB(replayData, repName, commit=False):
         print('committed')
         DB.commit()
 
-
+checkAndHandleIgnores()
 loopIsNullpo()
