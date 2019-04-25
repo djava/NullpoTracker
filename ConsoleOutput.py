@@ -135,8 +135,7 @@ def makeGraphs():
                               ).fetchall()
 
     timeData = [datetime.datetime.fromisoformat(i[0][::-1]
-                                                .replace('-', ':', 2)
-                                                .replace(' ', 'T')[::-1])
+                                                .replace('-', ':', 2)[::-1])
                 for i in timeData]
 
     plt.plot(timeData, statData)

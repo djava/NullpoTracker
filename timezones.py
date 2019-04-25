@@ -1,3 +1,8 @@
+''' Sets up timezone alignment for the modification
+    time versus the current time on the replay files
+    for NullpoTracker
+'''
+
 import datetime
 import configparser
 
