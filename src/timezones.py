@@ -13,7 +13,7 @@ CONFIG = configparser.ConfigParser()
 CONFIG.read('config.ini')
 
 TIMEZONE_NAME = CONFIG['TIMEZONE']['timezone']
-USE_DST = CONFIG['TIMEZONE']['USE_DST']
+USE_DST = CONFIG['TIMEZONE']['USE_DST'].lower() == 'true'
 
 UTC_OFFSET_DICT = {
     'ATH':  2, 'PAR':  1, 'UTC':  0,
