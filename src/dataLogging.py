@@ -3,7 +3,7 @@ import csv
 
 
 def insertReplayIntoCSV(rep):
-    with open('gameLog.csv', 'a') as gameLogFile:
+    with open('internal/gameLog.csv', 'a') as gameLogFile:
         lineToInsert = [
             rep.fileName,
             rep.mode,
