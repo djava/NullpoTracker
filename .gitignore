@@ -1,3 +1,4 @@
 .idea/
 .vscode/
 NullpoTracker.code-workspace
+src/__pycache__/
