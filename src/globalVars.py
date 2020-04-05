@@ -1,6 +1,5 @@
 import configparser
 import datetime
-import timezones
 import pickle
 import enum
 
@@ -13,7 +12,7 @@ REPLAY_PATH = CONFIG['SETUP']['nullpoPath'] + '/replay/'
 
 # Tracks the time NullpoTracker was opened, mostly just to check if
 # the ignore files have changed since it was last opened
-OPEN_TIME = datetime.datetime.now(tz=timezones.CURRENT_TIMEZONE)
+OPEN_TIME = datetime.datetime.now()
 with open('internal/lastTimeOpenedDT.pickle', 'rb+') as lTO:
     try:
         LAST_TIME_OPENED = pickle.load(lTO)
@@ -21,6 +20,6 @@ with open('internal/lastTimeOpenedDT.pickle', 'rb+') as lTO:
         # Just sets it to the epoch if the .pickle
         # file is empty or corrupted, not a big deal
         # if the ignores run extraneously
-        LAST_TIME_OPENED = datetime.datetime(1970, 1, 1, tzinfo=timezones.UTC)
+        LAST_TIME_OPENED = datetime.datetime(1970, 1, 1)
 
     pickle.dump(OPEN_TIME, lTO, pickle.HIGHEST_PROTOCOL)

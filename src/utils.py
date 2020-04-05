@@ -1,6 +1,5 @@
 import os
 import datetime
-import timezones
 import globalVars
 
 
@@ -15,7 +14,6 @@ def modTime(path: str, *includeReplayPath: bool) -> datetime.datetime:
 
     if includeReplayPath:
         return datetime.datetime.fromtimestamp(
-            os.path.getmtime(globalVars.REPLAY_PATH + path), tz=timezones.UTC)
+            os.path.getmtime(globalVars.REPLAY_PATH + path))
     else:
-        return datetime.datetime.fromtimestamp(
-            os.path.getmtime(path), tz=timezones.UTC)
+        return datetime.datetime.fromtimestamp(os.path.getmtime(path))

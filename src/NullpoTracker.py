@@ -1,4 +1,4 @@
-import dataCollection
+from gameTracker import dataCollection
 
 
 if __name__ == '__main__':
