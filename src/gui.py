@@ -1,8 +1,11 @@
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QMainWindow, QTableWidgetItem, QCheckBox,
-                             QApplication, QTableWidget, QPushButton,)
+                             QApplication, QTableWidget, QPushButton,
+                             QMenu, QAction, QComboBox, QListWidgetItem)
 from PyQt5.QtWidgets import QAbstractItemView as QAbsItemView
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QModelIndex
+from PyQt5.QtGui import QStandardItem, QMouseEvent
+from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, pyqtSignal
+from checkableComboBox import CheckableComboBox
 from ui_NullpoTracker import Ui_NullpoTracker
 from enum import IntEnum
 import csv
@@ -36,6 +39,26 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.addReplayToTracker(i)
 
         self.gameTracker.setSortingEnabled(True)
+        self.ModeSelectorOpenButton.clicked.connect(
+            self.modeSelectorButtonClickHandler)
+        self.ModeSelectorOpenButton.setText('All Modes Enabled')
+        self.ModeSelectorComboBox.setVisible(False)
+
+        item = QListWidgetItem('All')
+        item.setCheckState(Qt.Checked)
+        self.ModeSelectorComboBox.addItem(item)
+        item = QListWidgetItem('None')
+        item.setCheckState(Qt.Unchecked)
+        self.ModeSelectorComboBox.addItem(item)
+        for i in sorted(list({i['mode'] for i in CSV_READER})):
+            item = QListWidgetItem()
+            item.setText(i)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            self.ModeSelectorComboBox.addItem(item)
+        self.ModeSelectorComboBox.itemClicked.connect(
+            self.modeSelectorClickHandler)
+        self.setModeSelectorButtonText()
 
     def setGridColumnWidths(self):
         self.gameTracker.setColumnWidth(gameTrackerIndexes.IGNORED, 15)
@@ -53,12 +76,17 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         GT = self.gameTracker
         RC = GT.rowCount()
 
+        timeStr = str(tdelta(0, float(rep['time'])/60))
+        if '.' not in timeStr:
+            timeStr += '.000'
+        timeStr = timeStr[:10]
+
         GTItemStrings = [
             '✓' if rep['fileName'] not in ignoredReplaysList else '✖',
             rep['fileName'],
             rep['mode'],
             str(round(float(rep['pps']), 3)).ljust(5, '0'),
-            str(tdelta(0, float(rep['time'])/60))[:-4],
+            timeStr,
             rep['score'],
             rep['pieces'],
             rep['lines'],
@@ -89,7 +117,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
         self.SelectionPPSStat.setText(CSV_SELECTION['pps'])
         self.SelectionTimeStat.setText(
-            str(tdelta(0, (float(CSV_SELECTION['time']) / 60))).rstrip('0'))
+            str(tdelta(0, (float(CSV_SELECTION['time']) / 60))).rstrip('0')
+                                                               .ljust(7, '0'))
 
         if selectedRow[GTI.MODE].text() == 'LINE RACE':
             self.SelectionScoreGoalName.setText('Goal:')
@@ -114,6 +143,84 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             else:
                 selectedItem.setText('✓')
                 deleteReplayfromIgnored(self.gameTracker.item(row, 1).text())
+
+    def modeSelectorButtonClickHandler(self):
+        self.ModeSelectorComboBox.setVisible(
+            not self.ModeSelectorComboBox.isVisible())
+        self.ModeSelectorComboBox.raise_()
+
+    def modeSelectorClickHandler(self, item: QListWidgetItem):
+        INDEX_ALL = 0
+        INDEX_NONE = 1
+        index = self.ModeSelectorComboBox.indexFromItem(item)
+        if index.row() == INDEX_ALL:
+            self.ModeSelectorComboBox\
+                .itemFromIndex(index.siblingAtRow(INDEX_ALL))\
+                .setCheckState(Qt.Checked)
+            self.ModeSelectorComboBox\
+                .itemFromIndex(index.siblingAtRow(INDEX_NONE))\
+                .setCheckState(Qt.Unchecked)
+            for i in range(2, self.ModeSelectorComboBox.count()):
+                item = self.ModeSelectorComboBox.itemFromIndex(
+                                                        index.siblingAtRow(i))
+                item.setCheckState(Qt.Checked)
+                self.showModeOnGrid(item.text())
+        elif index.row() == INDEX_NONE:
+            self.ModeSelectorComboBox\
+                .itemFromIndex(index.siblingAtRow(INDEX_NONE))\
+                .setCheckState(Qt.Checked)
+            self.ModeSelectorComboBox\
+                .itemFromIndex(index.siblingAtRow(INDEX_ALL))\
+                .setCheckState(Qt.Unchecked)
+            for i in range(2, self.ModeSelectorComboBox.count()):
+                item = self.ModeSelectorComboBox.itemFromIndex(
+                                                        index.siblingAtRow(i))
+                item.setCheckState(False)
+                self.hideModeFromGrid(item.text())
+
+        else:
+            if item.checkState():
+                item.setCheckState(Qt.Unchecked)
+                self.hideModeFromGrid(item.text())
+            else:
+                item.setCheckState(Qt.Checked)
+                self.showModeOnGrid(item.text())
+        self.setModeSelectorButtonText()
+
+    def hideModeFromGrid(self, mode: str):
+        GT = self.gameTracker
+        MODE_INDEX = gameTrackerIndexes.MODE
+        toBeRemoved = []
+        rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
+        for i in range(GT.rowCount()):
+            if GT.itemFromIndex(rowZeroIndex.siblingAtRow(i)).text() == mode:
+                GT.hideRow(i)
+
+    def showModeOnGrid(self, mode: str):
+        GT = self.gameTracker
+        MODE_INDEX = gameTrackerIndexes.MODE
+        toBeRemoved = []
+        rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
+        for i in range(GT.rowCount()):
+            if GT.itemFromIndex(rowZeroIndex.siblingAtRow(i)).text() == mode:
+                if GT.isRowHidden(i):
+                    GT.showRow(i)
+
+    def setModeSelectorButtonText(self):
+        BUTTON = self.ModeSelectorOpenButton
+        MODE_SELECTOR = self.ModeSelectorComboBox
+        totalModes = MODE_SELECTOR.count() - 2
+        enabledModes = 0
+        for i in range(2, MODE_SELECTOR.count()):
+            index = MODE_SELECTOR.model().index(i, 0)
+            if MODE_SELECTOR.itemFromIndex(index).checkState() == Qt.Checked:
+                enabledModes += 1
+        
+        if totalModes == enabledModes:
+            BUTTON.setText('All Modes Enabled')
+        else:
+            BUTTON.setText(f'{enabledModes} Modes Enabled' +
+                           f'({totalModes - enabledModes} Disabled)')
 
 
 def writeToIgnoredReplays(string: str, newLine=True):

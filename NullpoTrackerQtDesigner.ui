@@ -864,7 +864,7 @@
       <height>51</height>
      </rect>
     </property>
-    <widget class="QWidget" name="ModesIgnored" native="true">
+    <widget class="QWidget" name="ModesEnabled" native="true">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -873,7 +873,7 @@
        <height>51</height>
       </rect>
      </property>
-     <widget class="QLabel" name="ModesToIgnoreLabel">
+     <widget class="QLabel" name="ModesEnabledLabel">
       <property name="geometry">
        <rect>
         <x>0</x>
@@ -883,7 +883,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Disabled Modes:</string>
+       <string>Enabled Modes:</string>
       </property>
       <property name="buddy">
        <cstring>ModeSelector</cstring>
@@ -1351,7 +1351,7 @@
       <rect>
        <x>10</x>
        <y>150</y>
-       <width>121</width>
+       <width>201</width>
        <height>21</height>
       </rect>
      </property>
@@ -1378,7 +1378,7 @@
        <rect>
         <x>50</x>
         <y>0</y>
-        <width>141</width>
+        <width>131</width>
         <height>21</height>
        </rect>
       </property>

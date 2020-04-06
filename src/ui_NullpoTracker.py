@@ -9,6 +9,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from enum import IntEnum
+from checkableComboBox import CheckableComboBox
 
 
 class Ui_NullpoTracker(object):
@@ -269,7 +270,8 @@ class Ui_NullpoTracker(object):
         self.WhichExtremaSelector = QtWidgets.QWidget(self.StatisticsFrame)
         self.WhichExtremaSelector.setGeometry(QtCore.QRect(10, 150, 201, 21))
         self.WhichExtremaSelector.setObjectName("WhichExtremaSelector")
-        self.ExtremaRadioButton = QtWidgets.QRadioButton(self.WhichExtremaSelector)
+        self.ExtremaRadioButton = QtWidgets.QRadioButton(
+            self.WhichExtremaSelector)
         self.ExtremaRadioButton.setGeometry(QtCore.QRect(0, 2, 82, 17))
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -277,7 +279,8 @@ class Ui_NullpoTracker(object):
         self.ExtremaRadioButton.setChecked(True)
         self.ExtremaRadioButton.setAutoExclusive(True)
         self.ExtremaRadioButton.setObjectName("ExtremaRadioButton")
-        self.PercentileRadioButton = QtWidgets.QRadioButton(self.WhichExtremaSelector)
+        self.PercentileRadioButton = QtWidgets.QRadioButton(
+            self.WhichExtremaSelector)
         self.PercentileRadioButton.setGeometry(QtCore.QRect(76, 2, 81, 17))
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -291,15 +294,19 @@ class Ui_NullpoTracker(object):
         self.Settings = QtWidgets.QWidget(self.Window)
         self.Settings.setGeometry(QtCore.QRect(10, 10, 791, 51))
         self.Settings.setObjectName("Settings")
-        self.ModesIgnored = QtWidgets.QWidget(self.Settings)
-        self.ModesIgnored.setGeometry(QtCore.QRect(10, 0, 221, 51))
-        self.ModesIgnored.setObjectName("ModesIgnored")
-        self.ModesToIgnoreLabel = QtWidgets.QLabel(self.ModesIgnored)
-        self.ModesToIgnoreLabel.setGeometry(QtCore.QRect(0, 0, 151, 16))
-        self.ModesToIgnoreLabel.setObjectName("ModesToIgnoreLabel")
-        self.ModeSelector = QtWidgets.QComboBox(self.ModesIgnored)
-        self.ModeSelector.setGeometry(QtCore.QRect(0, 20, 221, 21))
-        self.ModeSelector.setObjectName("ModeSelector")
+        self.ModesEnabled = QtWidgets.QWidget(self.Settings)
+        self.ModesEnabled.setGeometry(QtCore.QRect(10, 0, 221, 51))
+        self.ModesEnabled.setObjectName("ModesEnabled")
+        self.ModesEnabledLabel = QtWidgets.QLabel(self.ModesEnabled)
+        self.ModesEnabledLabel.setGeometry(QtCore.QRect(0, 0, 151, 16))
+        self.ModesEnabledLabel.setObjectName("ModesEnabledLabel")
+        self.ModeSelectorOpenButton = QtWidgets.QPushButton(self.ModesEnabled)
+        self.ModeSelectorOpenButton.setGeometry(QtCore.QRect(0, 20, 221, 21))
+        self.ModeSelectorOpenButton.setObjectName("ModeSelectorOpenButton")
+        self.ModeSelectorComboBox = QtWidgets.QListWidget(self.Window)
+        self.ModeSelectorComboBox.setGeometry(QtCore.QRect(21, 50, 219, 140))
+        self.ModeSelectorComboBox.setObjectName("ModeSelectorComboBox")
+        self.ModeSelectorComboBox.raise_()
         self.DateRangeSelector = QtWidgets.QWidget(self.Settings)
         self.DateRangeSelector.setGeometry(QtCore.QRect(240, 0, 531, 51))
         self.DateRangeSelector.setObjectName("DateRangeSelector")
@@ -527,7 +534,7 @@ class Ui_NullpoTracker(object):
         self.menuMenu.addAction(self.actionRefresh)
         self.menuMenu.addAction(self.actionExist)
         self.MenuBar.addAction(self.menuMenu.menuAction())
-        self.ModesToIgnoreLabel.setBuddy(self.ModeSelector)
+        self.ModesEnabledLabel.setBuddy(self.ModeSelectorComboBox)
         self.DateRangeLabel.setBuddy(self.DateRangeComboBox)
         self.FromLabel.setBuddy(self.FromDateTimeSelector)
         self.ToLabel.setBuddy(self.ToDateTimeSelector)
@@ -577,9 +584,10 @@ class Ui_NullpoTracker(object):
             _translate("NullpoTracker", "Lowest Time:"))
         self.LowestTimeStat.setText(_translate("NullpoTracker", "TextLabel"))
         self.ExtremaRadioButton.setText(_translate("NullpoTracker", "Extrema"))
-        self.PercentileRadioButton.setText(_translate("NullpoTracker", "Percentile"))
-        self.ModesToIgnoreLabel.setText(
-            _translate("NullpoTracker", "Disabled Modes:"))
+        self.PercentileRadioButton.setText(
+            _translate("NullpoTracker", "Percentile"))
+        self.ModesEnabledLabel.setText(
+            _translate("NullpoTracker", "Enabled Modes:"))
         self.DateRangeLabel.setText(_translate("NullpoTracker", "Date Range:"))
         self.FromLabel.setText(_translate("NullpoTracker", "From:"))
         self.ToLabel.setText(_translate("NullpoTracker", "To:"))
@@ -627,4 +635,3 @@ class Ui_NullpoTracker(object):
         self.menuMenu.setTitle(_translate("NullpoTracker", "Menu"))
         self.actionRefresh.setText(_translate("NullpoTracker", "Refresh"))
         self.actionExist.setText(_translate("NullpoTracker", "Exit"))
-
