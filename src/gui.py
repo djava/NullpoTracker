@@ -9,7 +9,8 @@ from checkableComboBox import CheckableComboBox
 from ui_NullpoTracker import Ui_NullpoTracker
 from enum import IntEnum
 import csv
-from datetime import timedelta as tdelta
+from datetime import datetime, timedelta as tdelta
+import time
 from os import path
 
 
@@ -25,7 +26,19 @@ class gameTrackerIndexes(IntEnum):
     GOAL = 8
 
 
+class DateRangeComboBoxIndexes(IntEnum):
+    TODAY = 0
+    THIS_WEEK = 1
+    THIS_MONTH = 2
+    THIS_YEAR = 3
+    ALL_TIME = 4
+    CUSTOM = 5
+
+
 class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
+    hiddenFromMode = set()
+    hiddenFromTime = set()
+
     def __init__(self):
         super(NullpoTrackerGui, self).__init__()
 
@@ -34,9 +47,10 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.gameTracker.itemSelectionChanged.connect(self.gridClickHandler)
         self.gameTracker.cellDoubleClicked.connect(self.gridDoubleClickHandler)
         self.setGridColumnWidths()
+        # self.gameTracker.sortByColumn(1, Qt.DescendingOrder)
 
-        for i in list(CSV_READER):
-            self.addReplayToTracker(i)
+        for row, i in zip(range(len(CSV_READER)), CSV_READER):
+            self.addReplayToTracker(i, row)
 
         self.gameTracker.setSortingEnabled(True)
         self.ModeSelectorOpenButton.clicked.connect(
@@ -60,6 +74,16 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.modeSelectorClickHandler)
         self.setModeSelectorButtonText()
 
+        self.DateRangeComboBox.addItems(
+            ['Last 24 Hours', 'Last Week', 'Last Month',
+             'Last Year', 'All Time', 'Custom'])
+        self.DateRangeComboBox.setCurrentIndex(
+            DateRangeComboBoxIndexes.ALL_TIME)
+        self.DateRangeComboBox.currentIndexChanged.connect(
+            self.dateRangeComboBoxChangedHandler)
+
+        self.menuButtonExit.triggered.connect(exit)
+
     def setGridColumnWidths(self):
         self.gameTracker.setColumnWidth(gameTrackerIndexes.IGNORED, 15)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.FILE_NAME, 137)
@@ -71,7 +95,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.gameTracker.setColumnWidth(gameTrackerIndexes.LINES, 37)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.GOAL, 35)
 
-    def addReplayToTracker(self, rep: dict):
+    def addReplayToTracker(self, rep: dict, row):
         self.gameTracker.insertRow(self.gameTracker.rowCount())
         GT = self.gameTracker
         RC = GT.rowCount()
@@ -95,6 +119,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
         for col, i in zip(range(9), GTItemStrings):
             item = QTableWidgetItem()
+            item.setWhatsThis(str(row))
             item.setText(i)
             if i == '✓' or i == '✖':
                 item.setTextAlignment(Qt.AlignCenter)
@@ -105,7 +130,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
     def gridClickHandler(self):
         GTI = gameTrackerIndexes
         selectedRow = self.gameTracker.selectedItems()
-        rowNumber = self.gameTracker.indexFromItem(selectedRow[0]).row()
+        rowNumber = int(selectedRow[0].whatsThis())
         CSV_SELECTION = list(CSV_READER)[rowNumber]
         self.SelectionNameStat.setText(selectedRow[GTI.FILE_NAME].text())
         if selectedRow[GTI.MODE].text() == 'MARATHON':
@@ -190,21 +215,30 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
     def hideModeFromGrid(self, mode: str):
         GT = self.gameTracker
         MODE_INDEX = gameTrackerIndexes.MODE
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
         toBeRemoved = []
         rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
         for i in range(GT.rowCount()):
-            if GT.itemFromIndex(rowZeroIndex.siblingAtRow(i)).text() == mode:
+            item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+            if item.text() == mode:
                 GT.hideRow(i)
+                self.hiddenFromMode.add(item.whatsThis())
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
 
     def showModeOnGrid(self, mode: str):
         GT = self.gameTracker
         MODE_INDEX = gameTrackerIndexes.MODE
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
         toBeRemoved = []
         rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
         for i in range(GT.rowCount()):
-            if GT.itemFromIndex(rowZeroIndex.siblingAtRow(i)).text() == mode:
-                if GT.isRowHidden(i):
-                    GT.showRow(i)
+            item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+            if item.text() == mode\
+               and i not in self.hiddenFromTime:
+                GT.showRow(i)
+                if i in self.hiddenFromMode:
+                    self.hiddenFromMode.remove(item.whatsThis())
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
 
     def setModeSelectorButtonText(self):
         BUTTON = self.ModeSelectorOpenButton
@@ -215,12 +249,41 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             index = MODE_SELECTOR.model().index(i, 0)
             if MODE_SELECTOR.itemFromIndex(index).checkState() == Qt.Checked:
                 enabledModes += 1
-        
+
         if totalModes == enabledModes:
             BUTTON.setText('All Modes Enabled')
         else:
             BUTTON.setText(f'{enabledModes} Modes Enabled' +
                            f'({totalModes - enabledModes} Disabled)')
+
+    def dateRangeComboBoxChangedHandler(self, index: int):
+        self.hiddenFromTime = set()
+        GT = self.gameTracker
+        CB_INDEXES = DateRangeComboBoxIndexes
+        DT_NOW = datetime.now()
+        INTERVAL_DT_DICT = {
+            CB_INDEXES.TODAY: tdelta(days=1),
+            CB_INDEXES.THIS_WEEK: tdelta(weeks=7),
+            CB_INDEXES.THIS_MONTH: tdelta(weeks=4),
+            CB_INDEXES.THIS_YEAR: tdelta(weeks=52)
+        }
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
+        self.CustomDateRangeSelector.setEnabled(False)
+        if index < CB_INDEXES.ALL_TIME:
+            for row, i in zip(range(len(CSV_READER)-1), CSV_READER[1:]):
+                timeSince = DT_NOW - datetime.fromisoformat(i['timeStamp'])
+                if timeSince > INTERVAL_DT_DICT[index]:
+                    GT.hideRow(row)
+                    self.hiddenFromTime.add(row)
+                elif row not in self.hiddenFromMode:
+                    GT.showRow(row)
+        elif index == CB_INDEXES.ALL_TIME:
+            for row in range(GT.rowCount()):
+                if row not in self.hiddenFromMode:
+                    GT.showRow(row)
+        else:
+            self.CustomDateRangeSelector.setEnabled(True)
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
 
 
 def writeToIgnoredReplays(string: str, newLine=True):

@@ -3,7 +3,7 @@ import os
 import csv
 
 import globalVars
-import utils
+from . import utils
 from . import dataLogging
 
 
@@ -50,10 +50,10 @@ class replayData(object):
             self.goal = None
             self.finished = None
 
-        # Converts YYYY_MM_DD_HH_MM_SS.rep into YYYY-MM-DDTHH-MM-SS (ISO 8601)
+        # Converts YYYY_MM_DD_HH_MM_SS.rep into YYYY-MM-DDTHH:MM:SS (ISO 8601)
         self.timeStamp = name.replace('_', '-', 2) \
                              .replace('_', 'T', 1) \
-                             .replace('_', '-', 2) \
+                             .replace('_', ':', 2) \
                              .replace('.rep', '')
 
 
