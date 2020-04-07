@@ -9,7 +9,6 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from enum import IntEnum
-from checkableComboBox import CheckableComboBox
 
 
 class Ui_NullpoTracker(object):
@@ -318,35 +317,31 @@ class Ui_NullpoTracker(object):
         self.DateRangeComboBox.setObjectName("DateRangeComboBox")
         self.CustomDateRangeSelector = QtWidgets.QWidget(
                                                         self.DateRangeSelector)
-        self.CustomDateRangeSelector.setEnabled(False)
         self.CustomDateRangeSelector.setGeometry(QtCore.QRect(230, 0, 291, 51))
         self.CustomDateRangeSelector.setObjectName("CustomDateRangeSelector")
+        self.CustomDateRangeSelector.setEnabled(False)
         self.FromSelector = QtWidgets.QWidget(self.CustomDateRangeSelector)
         self.FromSelector.setGeometry(QtCore.QRect(0, 0, 141, 51))
         self.FromSelector.setObjectName("FromSelector")
         self.FromLabel = QtWidgets.QLabel(self.FromSelector)
-        self.FromLabel.setEnabled(False)
         self.FromLabel.setGeometry(QtCore.QRect(0, 0, 47, 16))
         font = QtGui.QFont()
         font.setPointSize(10)
         self.FromLabel.setFont(font)
         self.FromLabel.setObjectName("FromLabel")
         self.FromDateTimeSelector = QtWidgets.QDateTimeEdit(self.FromSelector)
-        self.FromDateTimeSelector.setEnabled(False)
         self.FromDateTimeSelector.setGeometry(QtCore.QRect(0, 20, 131, 22))
         self.FromDateTimeSelector.setObjectName("FromDateTimeSelector")
         self.ToSelector = QtWidgets.QWidget(self.CustomDateRangeSelector)
         self.ToSelector.setGeometry(QtCore.QRect(160, 0, 141, 51))
         self.ToSelector.setObjectName("ToSelector")
         self.ToLabel = QtWidgets.QLabel(self.ToSelector)
-        self.ToLabel.setEnabled(False)
         self.ToLabel.setGeometry(QtCore.QRect(0, 0, 47, 16))
         font = QtGui.QFont()
         font.setPointSize(10)
         self.ToLabel.setFont(font)
         self.ToLabel.setObjectName("ToLabel")
         self.ToDateTimeSelector = QtWidgets.QDateTimeEdit(self.ToSelector)
-        self.ToDateTimeSelector.setEnabled(False)
         self.ToDateTimeSelector.setGeometry(QtCore.QRect(0, 20, 131, 22))
         self.ToDateTimeSelector.setObjectName("ToDateTimeSelector")
         self.gameTracker = QtWidgets.QTableWidget(self.Window)
