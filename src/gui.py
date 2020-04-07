@@ -6,11 +6,12 @@ from PyQt5.QtWidgets import QAbstractItemView as QAbsItemView
 from PyQt5.QtGui import QStandardItem, QMouseEvent
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDateTime
 from ui_NullpoTracker import Ui_NullpoTracker
-from enum import IntEnum
+from enum import IntEnum, Enum, auto
 import csv
 from datetime import datetime, timedelta as tdelta
 import time
-import statistics as stat
+import statistics
+import math
 from os import path
 
 
@@ -35,6 +36,14 @@ class DateRangeComboBoxIndexes(IntEnum):
     CUSTOM = 5
 
 
+class statisticsRadioButtons(Enum):
+    AVERAGE = auto()
+    MEDIAN = auto()
+    MAD = auto()
+    EXTREMA = auto()
+    PERCENTILE = auto()
+
+
 class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
     hiddenFromMode = set()
     hiddenFromTime = set()
@@ -42,7 +51,6 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
     def __init__(self):
         super(NullpoTrackerGui, self).__init__()
 
-        # Set up the user interface from Designer.
         self.setupUi(self)
         self.gameTracker.itemSelectionChanged.connect(self.gridClickHandler)
         self.gameTracker.cellDoubleClicked.connect(self.gridDoubleClickHandler)
@@ -65,12 +73,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         item = QListWidgetItem('None')
         item.setCheckState(Qt.Unchecked)
         self.ModeSelectorComboBox.addItem(item)
-        for i in sorted(list({i['mode'] for i in CSV_READER})):
-            item = QListWidgetItem()
-            item.setText(i)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked)
-            self.ModeSelectorComboBox.addItem(item)
+
+        self.fillModeSelector()
         self.ModeSelectorComboBox.itemClicked.connect(
             self.modeSelectorClickHandler)
         self.setModeSelectorButtonText()
@@ -96,8 +100,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.meanRadioButtonClickedHandler)
         self.MedianRadioButton.clicked.connect(
             self.medianRadioButtonClickedHandler)
-        self.MADRadioButton.clicked.connect(
-            self.MADRadioButtonClickedHandler)
+        self.StdevRadioButton.clicked.connect(
+            self.StdevRadioButtonClickedHandler)
         self.PercentileSpinBox.setEnabled(False)
         self.ExtremaRadioButton.clicked.connect(
             self.extremaRadioButtonClickedHandler)
@@ -106,12 +110,14 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.PercentileSpinBox.valueChanged.connect(
             self.percentileRadioButtonOrSpinBoxClickedHandler)
 
+        self.reloadStatistics()
+
         self.menuButtonExit.triggered.connect(exit)
 
     def setGridColumnWidths(self):
         self.gameTracker.setColumnWidth(gameTrackerIndexes.IGNORED, 15)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.FILE_NAME, 137)
-        self.gameTracker.setColumnWidth(gameTrackerIndexes.MODE, 90)
+        self.gameTracker.setColumnWidth(gameTrackerIndexes.MODE, 105)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.PPS, 40)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.TIME, 58)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.SCORE, 52)
@@ -143,7 +149,6 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
         for col, i in zip(range(9), GTItemStrings):
             item = QTableWidgetItem()
-            item.setWhatsThis(str(row))
             item.setText(i)
             if i == '✓' or i == '✖':
                 item.setTextAlignment(Qt.AlignCenter)
@@ -154,7 +159,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
     def gridClickHandler(self):
         GTI = gameTrackerIndexes
         selectedRow = self.gameTracker.selectedItems()
-        rowNumber = int(selectedRow[0].whatsThis())
+        rowNumber = self.gameTracker.selectedIndexes()[0].row()
         CSV_SELECTION = list(CSV_READER)[rowNumber]
         self.SelectionNameStat.setText(selectedRow[GTI.FILE_NAME].text())
         if selectedRow[GTI.MODE].text() == 'MARATHON':
@@ -193,12 +198,33 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 selectedItem.setText('✓')
                 deleteReplayfromIgnored(self.gameTracker.item(row, 1).text())
 
+    def fillModeSelector(self):
+        modesSet = set()
+        for i in CSV_READER:
+            if i['mode'] == 'LINE RACE':
+                modesSet.add('LINE RACE (' + i['goal'] + ')')
+            else:
+                modesSet.add(i['mode'])
+        modesList = sorted(list(modesSet))
+        if 'LINE RACE (100)' in modesList and 'LINE RACE (40)' in modesList:
+            del modesList[modesList.index('LINE RACE (100)')]
+            modesList.insert(
+                modesList.index('LINE RACE (40)') + 1, 'LINE RACE (100)')
+        for i in modesList:
+            item = QListWidgetItem()
+            item.setText(i)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            self.ModeSelectorComboBox.addItem(item)
+
     def modeSelectorButtonClickHandler(self):
         self.ModeSelectorComboBox.setVisible(
             not self.ModeSelectorComboBox.isVisible())
         self.ModeSelectorComboBox.raise_()
 
     def modeSelectorClickHandler(self, item: QListWidgetItem):
+        self.gameTracker.sortByColumn(
+            gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
         INDEX_ALL = 0
         INDEX_NONE = 1
         index = self.ModeSelectorComboBox.indexFromItem(item)
@@ -235,6 +261,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 item.setCheckState(Qt.Checked)
                 self.showModeOnGrid(item.text())
         self.setModeSelectorButtonText()
+        self.reloadStatistics()
 
     def hideModeFromGrid(self, mode: str):
         self.gameTracker.sortByColumn(
@@ -262,7 +289,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                and i not in self.hiddenFromTime:
                 GT.showRow(i)
                 if i in self.hiddenFromMode:
-                    self.hiddenFromMode.remove(item.whatsThis())
+                    self.hiddenFromMode.remove(item)
         GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
 
     def setModeSelectorButtonText(self):
@@ -296,7 +323,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         }
         self.CustomDateRangeSelector.setEnabled(False)
         if index < CB_INDEXES.ALL_TIME:
-            for row, i in zip(range(len(CSV_READER)-1), CSV_READER):
+            for row, i in zip(range(len(CSV_READER)), CSV_READER):
                 timeSince = DT_NOW - datetime.fromisoformat(i['timeStamp'])
                 if timeSince > INTERVAL_DT_DICT[index]:
                     GT.hideRow(row)
@@ -311,8 +338,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.CustomDateRangeSelector.setEnabled(True)
             self.customDateTimeChangedHandler()
 
-        self.gameTracker.sortByColumn(
-            gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
+        self.reloadStatistics()
 
     def customDateTimeChangedHandler(self):
         self.gameTracker.sortByColumn(
@@ -341,6 +367,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.AvgScoreName.setText('Avg Score:')
         self.AvgLinesName.setText('Avg Lines:')
         self.AvgPiecesName.setText('Avg Pieces:')
+        self.reloadStatistics()
 
     def medianRadioButtonClickedHandler(self):
         self.AvgPPSName.setText('Med PPS:')
@@ -348,13 +375,15 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.AvgScoreName.setText('Med Score:')
         self.AvgLinesName.setText('Med Lines:')
         self.AvgPiecesName.setText('Med Pieces:')
+        self.reloadStatistics()
 
-    def MADRadioButtonClickedHandler(self):
-        self.AvgPPSName.setText('MAD PPS:')
-        self.AvgTimeName.setText('MAD Time:')
-        self.AvgScoreName.setText('MAD Score:')
-        self.AvgLinesName.setText('MAD Lines:')
-        self.AvgPiecesName.setText('MAD Pieces:')
+    def StdevRadioButtonClickedHandler(self):
+        self.AvgPPSName.setText('Dev. PPS:')
+        self.AvgTimeName.setText('Dev. Time:')
+        self.AvgScoreName.setText('Dev. Score:')
+        self.AvgLinesName.setText('Dev. Lines:')
+        self.AvgPiecesName.setText('Dev. Pieces:')
+        self.reloadStatistics()
 
     def extremaRadioButtonClickedHandler(self):
         self.PercentileSpinBox.setEnabled(False)
@@ -366,18 +395,99 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.LowestPiecesName.setText('Lowest Pieces:')
         self.HighestLinesName.setText('Highest Lines:')
         self.LowestLinesName.setText('Lowest Lines:')
-    
+        self.reloadStatistics()
+
     def percentileRadioButtonOrSpinBoxClickedHandler(self):
         self.PercentileSpinBox.setEnabled(True)
         perc = self.PercentileSpinBox.value()
         self.HighestPPSName.setText(f'{perc}% PPS:')
-        self.LowestPPSName.setText(f'{perc}% PPS:')
+        self.LowestPPSName.setText(f'{100 - perc}% PPS:')
         self.HighestTimeName.setText(f'{perc}% Time:')
-        self.LowestTimeName.setText(f'{perc}% Time:')
+        self.LowestTimeName.setText(f'{100 - perc}% Time:')
         self.HighestPiecesName.setText(f'{perc}% Pieces:')
-        self.LowestPiecesName.setText(f'{perc}% Pieces:')
+        self.LowestPiecesName.setText(f'{100 - perc}% Pieces:')
         self.HighestLinesName.setText(f'{perc}% Lines:')
-        self.LowestLinesName.setText(f'{perc}% Lines:')
+        self.LowestLinesName.setText(f'{100 - perc}% Lines:')
+        self.reloadStatistics()
+
+    def reloadStatistics(self):
+        GT = self.gameTracker
+        GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
+
+        statsToTrack = ['pps', 'time', 'score', 'pieces', 'lines']
+        statsDict = {}
+        for col in statsToTrack:
+            stat = []
+            for row in range(GT.rowCount()):
+                if not GT.isRowHidden(row):
+                    stat.append(float(CSV_READER[row][col]))
+            statsDict[col] = sorted(stat)
+
+        if self.MeanRadioButton.isChecked():
+            stat = statistics.mean(statsDict['pps'])
+            self.AvgPPSStat.setText(str(round(stat, 5)))
+            stat = statistics.mean(statsDict['time'])
+            stat = str(tdelta(0, (float(stat) / 60)))[:11]
+            self.AvgTimeStat.setText(stat)
+            stat = statistics.mean(statsDict['score'])
+            self.AvgScoreStat.setText(str(round(stat, 2)))
+            stat = statistics.mean(statsDict['pieces'])
+            self.AvgPiecesStat.setText(str(round(stat, 2)))
+            stat = statistics.mean(statsDict['lines'])
+            self.AvgLinesStat.setText(str(round(stat, 3)))
+        elif self.medianRadioButton.isChecked():
+            stat = statistics.median(statsDict['pps'])
+            self.AvgPPSStat.setText(str(round(stat, 5)))
+            stat = statistics.median(statsDict['time'])
+            stat = str(tdelta(0, (float(stat) / 60)))[:11]
+            self.AvgTimeStat.setText(stat)
+            stat = statistics.median(statsDict['score'])
+            self.AvgScoreStat.setText(str(int(stat)))
+            stat = statistics.median(statsDict['pieces'])
+            self.AvgPiecesStat.setText(str(int(stat)))
+            stat = statistics.median(statsDict['lines'])
+            self.AvgLinesStat.setText(str(int(stat)))
+        elif self.StdevRadioButton.isChecked():
+            stat = statistics.stdev(statsDict['pps'])
+            self.AvgPPSStat.setText(str(round(stat, 4)))
+            stat = statistics.stdev(statsDict['time'])
+            self.AvgTimeStat.setText(str(round(stat, 4)))
+            stat = statistics.stdev(statsDict['score'])
+            self.AvgScoreStat.setText(str(round(stat, 4)))
+            stat = statistics.stdev(statsDict['pieces'])
+            self.AvgPiecesStat.setText(str(round(stat, 4)))
+            stat = statistics.stdev(statsDict['lines'])
+            self.AvgLinesStat.setText(str(round(stat, 4)))
+
+        if self.ExtremaRadioButton.isChecked():
+            self.HighestPPSStat.setText(str(max(statsDict['pps'])))
+            self.LowestPPSStat.setText(str(min(statsDict['pps'])))
+            timeStr = str(tdelta(0, (float(max(statsDict['time'])) / 60)))[:11]
+            self.HighestTimeStat.setText(timeStr)
+            timeStr = str(tdelta(0, (float(min(statsDict['time'])) / 60)))[:11]
+            self.LowestTimeStat.setText(timeStr)
+            self.HighestPiecesStat.setText(str(max(statsDict['pieces'])))
+            self.LowestPiecesStat.setText(str(min(statsDict['pieces'])))
+            self.HighestLinesStat.setText(str(max(statsDict['lines'])))
+            self.LowestLinesStat.setText(str(min(statsDict['lines'])))
+        elif self.PercentileRadioButton.isChecked():
+            percentile = self.PercentileSpinBox.value()
+            self.HighestPPSStat.setText(
+                str(findPercentile(statsDict['pps'], percentile)))
+            self.LowestPPSStat.setText(
+                str(findPercentile(statsDict['pps'], 100 - percentile)))
+            self.HighestTimeStat.setText(
+                str(findPercentile(statsDict['time'], percentile)))
+            self.LowestTimeStat.setText(
+                str(findPercentile(statsDict['time'], 100 - percentile)))
+            self.HighestPiecesStat.setText(
+                str(findPercentile(statsDict['pieces'], percentile)))
+            self.LowestPiecesStat.setText(
+                str(findPercentile(statsDict['pieces'], 100 - percentile)))
+            self.HighestLinesStat.setText(
+                str(findPercentile(statsDict['lines'], percentile)))
+            self.LowestLinesStat.setText(
+                str(findPercentile(statsDict['lines'], 100 - percentile)))
 
 
 def writeToIgnoredReplays(string: str, newLine=True):
@@ -402,6 +512,19 @@ def deleteReplayfromIgnored(name: str):
             ignoredReplaysFile.write(i)
     ignoredReplaysFile.seek(0)
     ignoredReplaysList = ignoredReplaysFile.readlines()
+
+
+def findPercentile(arr: list, perc: float):
+    indexOfPerc = (len(arr)-1) * (perc/100)
+    if indexOfPerc % 1 == 0:
+        return arr[int(indexOfPerc)]
+    else:
+        ret = statistics.mean(
+            [arr[math.floor(indexOfPerc)], arr[math.ceil(indexOfPerc)]])
+        if ret % 1 == 0:
+            return int(ret)
+        else:
+            return ret
 
 
 CSV_FILE = open('internal/GameLog.csv', 'r')
