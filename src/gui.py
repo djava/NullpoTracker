@@ -10,6 +10,7 @@ from enum import IntEnum
 import csv
 from datetime import datetime, timedelta as tdelta
 import time
+import statistics as stat
 from os import path
 
 
@@ -90,6 +91,20 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.customDateTimeChangedHandler)
         self.FromDateTimeSelector.dateTimeChanged.connect(
             self.customDateTimeChangedHandler)
+
+        self.MeanRadioButton.clicked.connect(
+            self.meanRadioButtonClickedHandler)
+        self.MedianRadioButton.clicked.connect(
+            self.medianRadioButtonClickedHandler)
+        self.MADRadioButton.clicked.connect(
+            self.MADRadioButtonClickedHandler)
+        self.PercentileSpinBox.setEnabled(False)
+        self.ExtremaRadioButton.clicked.connect(
+            self.extremaRadioButtonClickedHandler)
+        self.PercentileRadioButton.clicked.connect(
+            self.percentileRadioButtonOrSpinBoxClickedHandler)
+        self.PercentileSpinBox.valueChanged.connect(
+            self.percentileRadioButtonOrSpinBoxClickedHandler)
 
         self.menuButtonExit.triggered.connect(exit)
 
@@ -317,8 +332,52 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 GT.hideRow(row)
                 self.hiddenFromTime.add(row)
 
-        # self.gameTracker.sortByColumn(
-        #     gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
+        self.gameTracker.sortByColumn(
+            gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
+
+    def meanRadioButtonClickedHandler(self):
+        self.AvgPPSName.setText('Avg PPS:')
+        self.AvgTimeName.setText('Avg Time:')
+        self.AvgScoreName.setText('Avg Score:')
+        self.AvgLinesName.setText('Avg Lines:')
+        self.AvgPiecesName.setText('Avg Pieces:')
+
+    def medianRadioButtonClickedHandler(self):
+        self.AvgPPSName.setText('Med PPS:')
+        self.AvgTimeName.setText('Med Time:')
+        self.AvgScoreName.setText('Med Score:')
+        self.AvgLinesName.setText('Med Lines:')
+        self.AvgPiecesName.setText('Med Pieces:')
+
+    def MADRadioButtonClickedHandler(self):
+        self.AvgPPSName.setText('MAD PPS:')
+        self.AvgTimeName.setText('MAD Time:')
+        self.AvgScoreName.setText('MAD Score:')
+        self.AvgLinesName.setText('MAD Lines:')
+        self.AvgPiecesName.setText('MAD Pieces:')
+
+    def extremaRadioButtonClickedHandler(self):
+        self.PercentileSpinBox.setEnabled(False)
+        self.HighestPPSName.setText('Highest PPS:')
+        self.LowestPPSName.setText('Lowest PPS:')
+        self.HighestTimeName.setText('Highest Time:')
+        self.LowestTimeName.setText('Lowest Time:')
+        self.HighestPiecesName.setText('Highest Pieces:')
+        self.LowestPiecesName.setText('Lowest Pieces:')
+        self.HighestLinesName.setText('Highest Lines:')
+        self.LowestLinesName.setText('Lowest Lines:')
+    
+    def percentileRadioButtonOrSpinBoxClickedHandler(self):
+        self.PercentileSpinBox.setEnabled(True)
+        perc = self.PercentileSpinBox.value()
+        self.HighestPPSName.setText(f'{perc}% PPS:')
+        self.LowestPPSName.setText(f'{perc}% PPS:')
+        self.HighestTimeName.setText(f'{perc}% Time:')
+        self.LowestTimeName.setText(f'{perc}% Time:')
+        self.HighestPiecesName.setText(f'{perc}% Pieces:')
+        self.LowestPiecesName.setText(f'{perc}% Pieces:')
+        self.HighestLinesName.setText(f'{perc}% Lines:')
+        self.LowestLinesName.setText(f'{perc}% Lines:')
 
 
 def writeToIgnoredReplays(string: str, newLine=True):
