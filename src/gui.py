@@ -264,18 +264,25 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.reloadStatistics()
 
     def hideModeFromGrid(self, mode: str):
-        self.gameTracker.sortByColumn(
-            gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
         GT = self.gameTracker
         MODE_INDEX = gameTrackerIndexes.MODE
         toBeRemoved = []
         rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
-        for i in range(GT.rowCount()):
-            item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
-            if item.text() == mode:
-                GT.hideRow(i)
-        self.gameTracker.sortByColumn(
-            gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
+        if not mode.startswith('LINE RACE ('):
+            for i in range(GT.rowCount()):
+                item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+                if item.text() == mode:
+                    GT.hideRow(i)
+                    self.hiddenFromMode.add(i)
+        else:
+            goal = mode.split('(')[1][:-1]
+            for i in range(GT.rowCount()):
+                modeItem = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+                goalItem = GT.itemFromIndex(
+                    rowZeroIndex.sibling(i, gameTrackerIndexes.GOAL))
+                if goalItem.text() == goal and modeItem.text() == 'LINE RACE':
+                    GT.hideRow(i)
+                    self.hiddenFromMode.add(i)
 
     def showModeOnGrid(self, mode: str):
         GT = self.gameTracker
@@ -283,13 +290,27 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
         toBeRemoved = []
         rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
-        for i in range(GT.rowCount()):
-            item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
-            if item.text() == mode \
-               and i not in self.hiddenFromTime:
-                GT.showRow(i)
-                if i in self.hiddenFromMode:
-                    self.hiddenFromMode.remove(item)
+        if not mode.startswith('LINE RACE ('):
+            for i in range(GT.rowCount()):
+                item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+                if item.text() == mode \
+                   and i not in self.hiddenFromTime:
+                    GT.showRow(i)
+                    print('showing')
+                    if i in self.hiddenFromMode:
+                        self.hiddenFromMode.remove(i)
+        else:
+            goal = mode.split('(')[1][:-1]
+            for i in range(GT.rowCount()):
+                modeItem = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+                goalItem = GT.itemFromIndex(
+                    rowZeroIndex.sibling(i, gameTrackerIndexes.GOAL))
+                if modeItem.text() == 'LINE RACE' and goalItem.text() == goal \
+                   and i not in self.hiddenFromTime:
+                    GT.showRow(i)
+                    if i in self.hiddenFromMode:
+                        self.hiddenFromMode.remove(i)
+
         GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
 
     def setModeSelectorButtonText(self):
@@ -352,7 +373,6 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             timeOfRep = datetime.fromisoformat(i['timeStamp'])
             if fromDT < timeOfRep and timeOfRep < toDT \
                and row not in self.hiddenFromMode:
-                print(fromDT < timeOfRep, fromDT, timeOfRep)
                 GT.showRow(row)
             else:
                 GT.hideRow(row)
@@ -423,6 +443,22 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                     stat.append(float(CSV_READER[row][col]))
             statsDict[col] = sorted(stat)
 
+        if not statsDict['pps']:
+            self.AvgPPSStat.setText('')
+            self.AvgTimeStat.setText('')
+            self.AvgScoreStat.setText('')
+            self.AvgLinesStat.setText('')
+            self.AvgPiecesStat.setText('')
+            self.HighestPPSStat.setText('')
+            self.LowestPPSStat.setText('')
+            self.HighestTimeStat.setText('')
+            self.LowestTimeStat.setText('')
+            self.HighestPiecesStat.setText('')
+            self.LowestPiecesStat.setText('')
+            self.HighestLinesStat.setText('')
+            self.LowestLinesStat.setText('')
+            return
+
         if self.MeanRadioButton.isChecked():
             stat = statistics.mean(statsDict['pps'])
             self.AvgPPSStat.setText(str(round(stat, 5)))
@@ -435,7 +471,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.AvgPiecesStat.setText(str(round(stat, 2)))
             stat = statistics.mean(statsDict['lines'])
             self.AvgLinesStat.setText(str(round(stat, 3)))
-        elif self.medianRadioButton.isChecked():
+        elif self.MedianRadioButton.isChecked():
             stat = statistics.median(statsDict['pps'])
             self.AvgPPSStat.setText(str(round(stat, 5)))
             stat = statistics.median(statsDict['time'])
