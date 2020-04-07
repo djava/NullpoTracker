@@ -13,6 +13,13 @@ import time
 import statistics
 import math
 from os import path
+from gameTracker import dataCollection
+
+
+CSV_FILE = open('internal/GameLog.csv', 'r')
+CSV_READER = list(csv.DictReader(CSV_FILE))
+ignoredReplaysFile = open('internal/ignoredReplays.txt', 'r+')
+ignoredReplaysList = [i.strip() for i in ignoredReplaysFile.readlines()]
 
 
 class gameTrackerIndexes(IntEnum):
@@ -296,7 +303,6 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 if item.text() == mode \
                    and i not in self.hiddenFromTime:
                     GT.showRow(i)
-                    print('showing')
                     if i in self.hiddenFromMode:
                         self.hiddenFromMode.remove(i)
         else:
@@ -563,13 +569,10 @@ def findPercentile(arr: list, perc: float):
             return ret
 
 
-CSV_FILE = open('internal/GameLog.csv', 'r')
-CSV_READER = list(csv.DictReader(CSV_FILE))
-ignoredReplaysFile = open('internal/ignoredReplays.txt', 'r+')
-ignoredReplaysList = [i.strip() for i in ignoredReplaysFile.readlines()]
-app = QApplication([])
-window = NullpoTrackerGui()
-window.show()
-app.exec()
-ignoredReplaysFile.close()
-CSV_FILE.close()
+def initGui():
+    app = QApplication([])
+    window = NullpoTrackerGui()
+    window.show()
+    app.exec()
+    ignoredReplaysFile.close()
+    CSV_FILE.close()

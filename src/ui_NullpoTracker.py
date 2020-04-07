@@ -525,11 +525,11 @@ class Ui_NullpoTracker(object):
         self.statusbar = QtWidgets.QStatusBar(NullpoTracker)
         self.statusbar.setObjectName("statusbar")
         NullpoTracker.setStatusBar(self.statusbar)
-        self.menuButtonRefresh = QtWidgets.QAction(NullpoTracker)
-        self.menuButtonRefresh.setObjectName("menuButtonRefresh")
+        # self.menuButtonRefresh = QtWidgets.QAction(NullpoTracker)
+        # self.menuButtonRefresh.setObjectName("menuButtonRefresh")
         self.menuButtonExit = QtWidgets.QAction(NullpoTracker)
         self.menuButtonExit.setObjectName("menuButtonExit")
-        self.menuMenu.addAction(self.menuButtonRefresh)
+        # self.menuMenu.addAction(self.menuButtonRefresh)
         self.menuMenu.addAction(self.menuButtonExit)
         self.MenuBar.addAction(self.menuMenu.menuAction())
         self.ModesEnabledLabel.setBuddy(self.ModeSelectorComboBox)
@@ -542,7 +542,7 @@ class Ui_NullpoTracker(object):
 
     def retranslateUi(self, NullpoTracker):
         _translate = QtCore.QCoreApplication.translate
-        NullpoTracker.setWindowTitle(_translate("NullpoTracker", "MainWindow"))
+        NullpoTracker.setWindowTitle(_translate("NullpoTracker", "NullpoTracker"))
         self.StatisticsLabel.setText(_translate("NullpoTracker", "Statistics"))
         self.MeanRadioButton.setText(_translate("NullpoTracker", "Mean"))
         self.MedianRadioButton.setText(_translate("NullpoTracker", "Median"))
@@ -631,5 +631,5 @@ class Ui_NullpoTracker(object):
         self.SelectionModeStat.setText(
             _translate("NullpoTracker", ""))
         self.menuMenu.setTitle(_translate("NullpoTracker", "Menu"))
-        self.menuButtonRefresh.setText(_translate("NullpoTracker", "Refresh"))
+        # self.menuButtonRefresh.setText(_translate("NullpoTracker", "Refresh"))
         self.menuButtonExit.setText(_translate("NullpoTracker", "Exit"))
