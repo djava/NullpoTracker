@@ -2,3 +2,4 @@
 .vscode/
 NullpoTracker.code-workspace
 src/__pycache__/
+src/gameTracker/__pycache__

@@ -1,7 +1,8 @@
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QMainWindow, QTableWidgetItem, QCheckBox,
                              QApplication, QTableWidget, QPushButton,
-                             QMenu, QAction, QComboBox, QListWidgetItem)
+                             QMenu, QAction, QComboBox, QListWidgetItem,
+                             QWidget)
 from PyQt5.QtWidgets import QAbstractItemView as QAbsItemView
 from PyQt5.QtGui import QStandardItem, QMouseEvent
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDateTime
@@ -73,7 +74,6 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             self.modeSelectorButtonClickHandler)
         self.ModeSelectorOpenButton.setText('All Modes Enabled')
         self.ModeSelectorComboBox.setVisible(False)
-
         item = QListWidgetItem('All')
         item.setCheckState(Qt.Checked)
         self.ModeSelectorComboBox.addItem(item)
@@ -120,6 +120,9 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.reloadStatistics()
 
         self.menuButtonExit.triggered.connect(exit)
+
+    def closeModeSelectorSlot(self):
+        self.ModeSelectorComboBox.setVisible(False)
 
     def setGridColumnWidths(self):
         self.gameTracker.setColumnWidth(gameTrackerIndexes.IGNORED, 15)
@@ -558,12 +561,12 @@ def deleteReplayfromIgnored(name: str):
 
 def findPercentile(arr: list, perc: float):
     indexOfPerc = (len(arr)-1) * (perc/100)
-    if indexOfPerc % 1 == 0:
+    if indexOfPerc.is_integer():
         return arr[int(indexOfPerc)]
     else:
         ret = statistics.mean(
-            [arr[math.floor(indexOfPerc)], arr[math.ceil(indexOfPerc)]])
-        if ret % 1 == 0:
+                [arr[math.floor(indexOfPerc)], arr[math.ceil(indexOfPerc)]])
+        if ret.is_integer():
             return int(ret)
         else:
             return ret
@@ -576,3 +579,8 @@ def initGui():
     app.exec()
     ignoredReplaysFile.close()
     CSV_FILE.close()
+
+
+if __name__ == '__main__':
+    dataCollection.findReplays()
+    initGui()
