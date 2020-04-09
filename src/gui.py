@@ -35,7 +35,6 @@ class gameTrackerIndexes(IntEnum):
     SCORE = 5
     PIECES = 6
     LINES = 7
-    GOAL = 8
 
 
 class DateRangeComboBoxIndexes(IntEnum):
@@ -134,13 +133,12 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
     def setGridColumnWidths(self):
         self.gameTracker.setColumnWidth(gameTrackerIndexes.IGNORED, 15)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.FILE_NAME, 137)
-        self.gameTracker.setColumnWidth(gameTrackerIndexes.MODE, 105)
+        self.gameTracker.setColumnWidth(gameTrackerIndexes.MODE, 125)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.PPS, 40)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.TIME, 58)
-        self.gameTracker.setColumnWidth(gameTrackerIndexes.SCORE, 52)
-        self.gameTracker.setColumnWidth(gameTrackerIndexes.PIECES, 43)
+        self.gameTracker.setColumnWidth(gameTrackerIndexes.SCORE, 58)
+        self.gameTracker.setColumnWidth(gameTrackerIndexes.PIECES, 48)
         self.gameTracker.setColumnWidth(gameTrackerIndexes.LINES, 37)
-        self.gameTracker.setColumnWidth(gameTrackerIndexes.GOAL, 35)
 
     def addReplayToTracker(self, rep: dict, row):
         self.gameTracker.insertRow(self.gameTracker.rowCount())
@@ -162,7 +160,6 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             rep['score'],
             rep['pieces'],
             rep['lines'],
-            rep['goal'],
         ]
 
         for col, i in zip(range(9), GTItemStrings):
@@ -180,34 +177,19 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         rowNumber = self.gameTracker.selectedIndexes()[0].row()
         CSV_SELECTION = list(CSV_READER)[rowNumber]
         self.SelectionNameStat.setText(selectedRow[GTI.FILE_NAME].text())
-        if selectedRow[GTI.MODE].text() == 'MARATHON':
-            goal = selectedRow[GTI.GOAL].text()
-            self.SelectionModeStat.setText(
-                f'MARATHON ({goal if goal != "None" else "Endless"})')
-        else:
-            self.SelectionModeStat.setText(selectedRow[GTI.MODE].text())
+        self.SelectionModeStat.setText(selectedRow[GTI.MODE].text())
 
         self.SelectionPPSStat.setText(CSV_SELECTION['pps'])
         self.SelectionTimeStat.setText(
-            str(tdelta(0, (float(CSV_SELECTION['time']) / framerate))
+            str(tdelta(0, (float(CSV_SELECTION['time']) / self.framerate))
                 ).rstrip('0').ljust(7, '0'))
-
-        if selectedRow[GTI.MODE].text() == 'LINE RACE':
-            self.SelectionScoreGoalName.setText('Goal:')
-            self.SelectionScoreGoalStat.setText(selectedRow[GTI.GOAL].text())
-        else:
-            self.SelectionScoreGoalName.setText('Score:')
-            self.SelectionScoreGoalStat.setText(selectedRow[GTI.SCORE].text())
-
+        self.selectionScoreName.setText('Score:')
+        self.selectionScoreStat.setText(selectedRow[GTI.SCORE].text())
         self.SelectionLinesStat.setText(selectedRow[GTI.LINES].text())
         self.SelectionPiecesStat.setText(selectedRow[GTI.PIECES].text())
 
     def gridDoubleClickHandler(self, row, col):
         if col == 0:
-            csvFieldNames = [
-                'fileName', 'mode', 'time', 'pps', 'score', 'lines',
-                'pieces', 'finished', 'goal', 'timeStamp', 'ignored'
-            ]
             selectedItem = self.gameTracker.item(row, col)
             if selectedItem.text() == '✓':
                 selectedItem.setText('✖')
@@ -218,13 +200,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.reloadStatistics()
 
     def fillModeSelector(self):
-        modesSet = set()
-        for i in CSV_READER:
-            if i['mode'] == 'LINE RACE':
-                modesSet.add('LINE RACE (' + i['goal'] + ')')
-            else:
-                modesSet.add(i['mode'])
-        modesList = sorted(list(modesSet))
+        modesList = sorted(list({i['mode'] for i in CSV_READER}))
         if 'LINE RACE (100)' in modesList and 'LINE RACE (40)' in modesList:
             del modesList[modesList.index('LINE RACE (100)')]
             modesList.insert(
@@ -287,21 +263,11 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         MODE_INDEX = gameTrackerIndexes.MODE
         toBeRemoved = []
         rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
-        if not mode.startswith('LINE RACE ('):
-            for i in range(GT.rowCount()):
-                item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
-                if item.text() == mode:
-                    GT.hideRow(i)
-                    self.hiddenFromMode.add(i)
-        else:
-            goal = mode.split('(')[1][:-1]
-            for i in range(GT.rowCount()):
-                modeItem = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
-                goalItem = GT.itemFromIndex(
-                    rowZeroIndex.sibling(i, gameTrackerIndexes.GOAL))
-                if goalItem.text() == goal and modeItem.text() == 'LINE RACE':
-                    GT.hideRow(i)
-                    self.hiddenFromMode.add(i)
+        for i in range(GT.rowCount()):
+            item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+            if item.text() == mode:
+                GT.hideRow(i)
+                self.hiddenFromMode.add(i)
 
     def showModeOnGrid(self, mode: str):
         GT = self.gameTracker
@@ -309,25 +275,13 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
         toBeRemoved = []
         rowZeroIndex = GT.model().index(0, gameTrackerIndexes.MODE)
-        if not mode.startswith('LINE RACE ('):
-            for i in range(GT.rowCount()):
-                item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
-                if item.text() == mode \
-                   and i not in self.hiddenFromTime:
-                    GT.showRow(i)
-                    if i in self.hiddenFromMode:
-                        self.hiddenFromMode.remove(i)
-        else:
-            goal = mode.split('(')[1][:-1]
-            for i in range(GT.rowCount()):
-                modeItem = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
-                goalItem = GT.itemFromIndex(
-                    rowZeroIndex.sibling(i, gameTrackerIndexes.GOAL))
-                if modeItem.text() == 'LINE RACE' and goalItem.text() == goal \
-                   and i not in self.hiddenFromTime:
-                    GT.showRow(i)
-                    if i in self.hiddenFromMode:
-                        self.hiddenFromMode.remove(i)
+        for i in range(GT.rowCount()):
+            item = GT.itemFromIndex(rowZeroIndex.siblingAtRow(i))
+            if item.text() == mode \
+                and i not in self.hiddenFromTime:
+                GT.showRow(i)
+                if i in self.hiddenFromMode:
+                    self.hiddenFromMode.remove(i)
 
         GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
 
@@ -462,7 +416,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 ignoredIndex = GT.model().index(row, GTI.IGNORED)
                 if not GT.isRowHidden(row) \
                    and GT.itemFromIndex(ignoredIndex).text() == '✓':
-                    statsDict[col] = sorted(stat)
+                    stat.append(float(CSV_READER[row][col]))
+            statsDict[col] = sorted(stat)
 
         if not statsDict['pps']:
             self.AvgPPSStat.setText('')
@@ -551,7 +506,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 str(findPercentile(statsDict['lines'], 100 - percentile)))
 
     def refreshButtonClickedHandler(self):
-        global CSV_READER
+        global CSV_READER, CSV_FILE
         GT = self.gameTracker
         dataCollection.findReplays()
         CSV_FILE.seek(0)
@@ -627,4 +582,6 @@ def initGui():
 
 if __name__ == '__main__':
     dataCollection.findReplays()
+    CSV_FILE.seek(0)
+    CSV_READER = list(csv.DictReader(CSV_FILE))
     initGui()

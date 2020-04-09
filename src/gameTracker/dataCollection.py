@@ -32,19 +32,14 @@ class replayData(object):
                 if i.startswith('linerace.goaltype.-1='):
                     self.goal = lineRaceGoalDict[i[-2]]
                     break
-            self.finished = int(self.stats['lines']) > self.goal
 
         elif self.mode == 'MARATHON':
             self.isLineRace = False
-            marathonGoalDict = {'0': 150, '1': 200, '2': 'None'}
+            marathonGoalDict = {'0': 150, '1': 200, '2': 'Endless'}
             for i in replayLines:
                 if i.startswith('marathon.gametype='):
                     self.goal = marathonGoalDict[i[-2]]
                     break
-            if i[-2] != '2':
-                self.finished = int(self.stats['lines']) > self.goal
-            else:
-                self.finished = None
         else:
             self.isLineRace = False
             self.goal = None
