@@ -14,6 +14,8 @@ import time
 import statistics
 import math
 from os import path
+
+import globalVars
 from gameTracker import dataCollection
 
 
@@ -53,6 +55,7 @@ class statisticsRadioButtons(Enum):
 
 
 class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
+    framerate = int(globalVars.CONFIG['OTHER']['framerate'])
     hiddenFromMode = set()
     hiddenFromTime = set()
 
@@ -142,7 +145,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         GT = self.gameTracker
         RC = GT.rowCount()
 
-        timeStr = str(tdelta(0, float(rep['time'])/60))
+        timeStr = str(
+            tdelta(0, float(rep['time']) / self.framerate))
         if '.' not in timeStr:
             timeStr += '.000'
         timeStr = timeStr[:10]
@@ -183,8 +187,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
         self.SelectionPPSStat.setText(CSV_SELECTION['pps'])
         self.SelectionTimeStat.setText(
-            str(tdelta(0, (float(CSV_SELECTION['time']) / 60))).rstrip('0')
-                                                               .ljust(7, '0'))
+            str(tdelta(0, (float(CSV_SELECTION['time']) / framerate))
+                ).rstrip('0').ljust(7, '0'))
 
         if selectedRow[GTI.MODE].text() == 'LINE RACE':
             self.SelectionScoreGoalName.setText('Goal:')
@@ -459,7 +463,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                     try:
                         stat.append(float(CSV_READER[row][col]))
                     except IndexError:
-                        print(f'ROW: {row}, COL: {col}, LEN(CSV_READER): {len(CSV_READER)}')
+                        print(
+                            f'ROW: {row}, COL: {col}, LEN(CSV_READER): {len(CSV_READER)}')
                         exit()
             statsDict[col] = sorted(stat)
 
@@ -483,7 +488,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             stat = statistics.mean(statsDict['pps'])
             self.AvgPPSStat.setText(str(round(stat, 5)))
             stat = statistics.mean(statsDict['time'])
-            stat = str(tdelta(0, (float(stat) / 60)))[:11]
+            stat = str(tdelta(0, (float(stat) / self.framerate)))[:11]
             self.AvgTimeStat.setText(stat)
             stat = statistics.mean(statsDict['score'])
             self.AvgScoreStat.setText(str(round(stat, 2)))
@@ -495,7 +500,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             stat = statistics.median(statsDict['pps'])
             self.AvgPPSStat.setText(str(round(stat, 5)))
             stat = statistics.median(statsDict['time'])
-            stat = str(tdelta(0, (float(stat) / 60)))[:11]
+            stat = str(tdelta(0, (float(stat) / self.framerate)))[:11]
             self.AvgTimeStat.setText(stat)
             stat = statistics.median(statsDict['score'])
             self.AvgScoreStat.setText(str(int(stat)))
@@ -518,9 +523,13 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         if self.ExtremaRadioButton.isChecked():
             self.HighestPPSStat.setText(str(max(statsDict['pps'])))
             self.LowestPPSStat.setText(str(min(statsDict['pps'])))
-            timeStr = str(tdelta(0, (float(max(statsDict['time'])) / 60)))[:11]
+            timeStr = str(tdelta(0,
+                                 float(max(statsDict['time'])) / self.framerate
+                                 ))[:11]
             self.HighestTimeStat.setText(timeStr)
-            timeStr = str(tdelta(0, (float(min(statsDict['time'])) / 60)))[:11]
+            timeStr = str(tdelta(0,
+                                 float(min(statsDict['time'])) / self.framerate
+                                 ))[:11]
             self.LowestTimeStat.setText(timeStr)
             self.HighestPiecesStat.setText(str(max(statsDict['pieces'])))
             self.LowestPiecesStat.setText(str(min(statsDict['pieces'])))
@@ -564,7 +573,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         for i in range(2, self.ModeSelectorComboBox.count()):
             isChecked = self.ModeSelectorComboBox.item(i).checkState()
             self.ModeSelectorComboBox.item(i).setCheckState(
-               Qt.Unchecked if isChecked else Qt.Checked)
+                Qt.Unchecked if isChecked else Qt.Checked)
             self.modeSelectorClickHandler(self.ModeSelectorComboBox.item(i))
 
         GT.sortByColumn(
@@ -602,7 +611,7 @@ def findPercentile(arr: list, perc: float):
         return arr[int(indexOfPerc)]
     else:
         ret = statistics.mean(
-                [arr[math.floor(indexOfPerc)], arr[math.ceil(indexOfPerc)]])
+            [arr[math.floor(indexOfPerc)], arr[math.ceil(indexOfPerc)]])
         if ret.is_integer():
             return int(ret)
         else:

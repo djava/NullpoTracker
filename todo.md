@@ -3,7 +3,7 @@
 - ~~Fix ignores~~
 - ~~Tie into findReplays()~~
 - Decent readme
-- Implement Refresh
+- ~~Implement Refresh~~
 - ~~Make ignores actually do something~~
 - Make clicking out of mode selector close it
 - Thread loading replays
@@ -11,9 +11,10 @@
   - Rework date/mode ignore into one system
 - ~~Fix config file~~
 - "Now" button on custom time range selector
+- Thread and/or add progress bar for refresh
 - Fix numeric sorting for score
 - Add a date/time row in grid to sort by to support changing names of files
-- Support different framerates
+- ~~Support different framerates~~
 - Code cleanup/commenting
 - Figure out how to add dropdown arrow to modeSelector
 - Add extrema for score
