@@ -7,20 +7,22 @@
 - ~~Move goal into mode column in grid~~
 - ~~Support different framerates~~
 - ~~Fix config file~~
+- ~~Preserve sorting after changing ranges~~
+  - ~~Rework date/mode ignore into one system~~
+- ~~Icon~~
 - Make clicking out of mode selector close it
 - Thread loading replays
-- Preserve sorting after changing ranges
-  - Rework date/mode ignore into one system
 - Decent readme
+- Add hide ignored checkbox
 - "Now" button on custom time range selector
 - Thread and/or add progress bar for refresh
 - Fix numeric sorting for score
 - Add a date/time row in grid to sort by to support changing names of files
-- 
+- Support Windows text scaling
+  - Reponsive design in general (possible in Qt?)
 - Code cleanup/commenting
 - Figure out how to add dropdown arrow to modeSelector
 - Add extrema for score
-- 
 - Add setting caching
   - Reset Button
 - Settings panel
@@ -28,7 +30,6 @@
   - Enable setting caching
   - Enable SOME setting caching 🧠
 - Click on label in extrema -> Select that replay in grid
-- ~~Icon~~
 - Multiplatform icons
 - Theming/general visual polish
 - Make .exe/packageable
