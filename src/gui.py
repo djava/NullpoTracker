@@ -462,13 +462,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 ignoredIndex = GT.model().index(row, GTI.IGNORED)
                 if not GT.isRowHidden(row) \
                    and GT.itemFromIndex(ignoredIndex).text() == '✓':
-                    try:
-                        stat.append(float(CSV_READER[row][col]))
-                    except IndexError:
-                        print(
-                            f'ROW: {row}, COL: {col}, LEN(CSV_READER): {len(CSV_READER)}')
-                        exit()
-            statsDict[col] = sorted(stat)
+                    statsDict[col] = sorted(stat)
 
         if not statsDict['pps']:
             self.AvgPPSStat.setText('')

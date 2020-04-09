@@ -542,7 +542,8 @@ class Ui_NullpoTracker(object):
 
     def retranslateUi(self, NullpoTracker):
         _translate = QtCore.QCoreApplication.translate
-        NullpoTracker.setWindowTitle(_translate("NullpoTracker", "NullpoTracker"))
+        NullpoTracker.setWindowTitle(
+            _translate("NullpoTracker", "NullpoTracker"))
         self.StatisticsLabel.setText(_translate("NullpoTracker", "Statistics"))
         self.MeanRadioButton.setText(_translate("NullpoTracker", "Mean"))
         self.MedianRadioButton.setText(_translate("NullpoTracker", "Median"))
