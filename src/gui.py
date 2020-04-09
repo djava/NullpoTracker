@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (QMainWindow, QTableWidgetItem, QCheckBox,
                              QMenu, QAction, QComboBox, QListWidgetItem,
                              QWidget)
 from PyQt5.QtWidgets import QAbstractItemView as QAbsItemView
-from PyQt5.QtGui import QStandardItem, QMouseEvent
+from PyQt5.QtGui import QStandardItem, QMouseEvent, QIcon
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QDateTime
 from ui_NullpoTracker import Ui_NullpoTracker
 from enum import IntEnum, Enum, auto
@@ -14,6 +14,7 @@ import time
 import statistics
 import math
 from os import path
+import ctypes
 
 import globalVars
 from gameTracker import dataCollection
@@ -61,6 +62,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
     def __init__(self):
         super(NullpoTrackerGui, self).__init__()
+        self.setWindowIcon(QIcon('icon.ico'))
 
         self.setupUi(self)
         self.gameTracker.itemSelectionChanged.connect(self.gridClickHandler)
@@ -620,6 +622,8 @@ def findPercentile(arr: list, perc: float):
 
 def initGui():
     app = QApplication([])
+    app.setWindowIcon(QIcon('icon.ico'))
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('.')
     window = NullpoTrackerGui()
     window.show()
     app.exec()

@@ -27,7 +27,8 @@
   - Enable setting caching
   - Enable SOME setting caching 🧠
 - Click on label in extrema -> Select that replay in grid
-- Icon
+- ~~Icon~~
+- Multiplatform icons
 - Theming/general visual polish
 - Make .exe/packageable
 
