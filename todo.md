@@ -4,6 +4,7 @@
 - ~~Tie into findReplays()~~
 - Decent readme
 - Implement Refresh
+- ~~Make ignores actually do something~~
 - Make clicking out of mode selector close it
 - Thread loading replays
 - Preserve sorting after changing ranges

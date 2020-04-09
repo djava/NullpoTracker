@@ -119,6 +119,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
         self.reloadStatistics()
 
+        self.menuButtonRefresh.triggered.connect(
+            self.refreshButtonClickedHandler)
         self.menuButtonExit.triggered.connect(exit)
 
     def closeModeSelectorSlot(self):
@@ -207,6 +209,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
             else:
                 selectedItem.setText('✓')
                 deleteReplayfromIgnored(self.gameTracker.item(row, 1).text())
+        self.reloadStatistics()
 
     def fillModeSelector(self):
         modesSet = set()
@@ -440,7 +443,9 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.reloadStatistics()
 
     def reloadStatistics(self):
+        global CSV_READER
         GT = self.gameTracker
+        GTI = gameTrackerIndexes
         GT.sortByColumn(gameTrackerIndexes.FILE_NAME, Qt.AscendingOrder)
 
         statsToTrack = ['pps', 'time', 'score', 'pieces', 'lines']
@@ -448,8 +453,14 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         for col in statsToTrack:
             stat = []
             for row in range(GT.rowCount()):
-                if not GT.isRowHidden(row):
-                    stat.append(float(CSV_READER[row][col]))
+                ignoredIndex = GT.model().index(row, GTI.IGNORED)
+                if not GT.isRowHidden(row) \
+                   and GT.itemFromIndex(ignoredIndex).text() == '✓':
+                    try:
+                        stat.append(float(CSV_READER[row][col]))
+                    except IndexError:
+                        print(f'ROW: {row}, COL: {col}, LEN(CSV_READER): {len(CSV_READER)}')
+                        exit()
             statsDict[col] = sorted(stat)
 
         if not statsDict['pps']:
@@ -533,6 +544,32 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 str(findPercentile(statsDict['lines'], percentile)))
             self.LowestLinesStat.setText(
                 str(findPercentile(statsDict['lines'], 100 - percentile)))
+
+    def refreshButtonClickedHandler(self):
+        global CSV_READER
+        GT = self.gameTracker
+        dataCollection.findReplays()
+        CSV_FILE.seek(0)
+        CSV_READER = list(csv.DictReader(CSV_FILE))
+        for i in range(GT.rowCount()-1, -1, -1):
+            GT.removeRow(i)
+
+        for row, i in zip(range(len(CSV_READER)), CSV_READER):
+            self.addReplayToTracker(i, row)
+
+        self.hiddenFromMode = set()
+        self.hiddenFromTime = set()
+        self.dateRangeComboBoxChangedHandler(
+            self.DateRangeComboBox.currentIndex())
+        for i in range(2, self.ModeSelectorComboBox.count()):
+            isChecked = self.ModeSelectorComboBox.item(i).checkState()
+            self.ModeSelectorComboBox.item(i).setCheckState(
+               Qt.Unchecked if isChecked else Qt.Checked)
+            self.modeSelectorClickHandler(self.ModeSelectorComboBox.item(i))
+
+        GT.sortByColumn(
+            gameTrackerIndexes.FILE_NAME, Qt.DescendingOrder)
+        self.reloadStatistics()
 
 
 def writeToIgnoredReplays(string: str, newLine=True):
