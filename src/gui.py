@@ -101,6 +101,11 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.FromDateTimeSelector.dateTimeChanged.connect(
             self.updateHiddenReplays)
 
+        self.ToDTNowButton.clicked.connect(
+            self.toDTNowButtonPressedHandler)
+        self.FromDTNowButton.clicked.connect(
+            self.fromDTNowButtonPressedHandler)
+
         self.hideIgnoredCheckBox.clicked.connect(self.updateHiddenReplays)
 
         self.MeanRadioButton.clicked.connect(
@@ -367,6 +372,12 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         else:
             self.CustomDateRangeSelector.setEnabled(False)
         self.updateHiddenReplays()
+
+    def toDTNowButtonPressedHandler(self):
+        self.ToDateTimeSelector.setDateTime(datetime.now())
+
+    def fromDTNowButtonPressedHandler(self):
+        self.FromDateTimeSelector.setDateTime(datetime.now())
 
     def meanRadioButtonClickedHandler(self):
         self.AvgPPSName.setText('Avg PPS:')

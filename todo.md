@@ -10,13 +10,13 @@
 - ~~Preserve sorting after changing ranges~~
   - ~~Rework date/mode ignore into one system~~
 - ~~Icon~~
-- Make clicking out of mode selector close it
+- ~~Add hide ignored checkbox~~
+- ~~"Now" button on custom time range selector~~
 - Thread loading replays
 - Decent readme
-- Add hide ignored checkbox
-- "Now" button on custom time range selector
 - Thread and/or add progress bar for refresh
-- Fix numeric sorting for score
+- Fix numeric sorting
+- Make clicking out of mode selector close it
 - Add a date/time row in grid to sort by to support changing names of files
 - Support Windows text scaling
   - Reponsive design in general (possible in Qt?)
