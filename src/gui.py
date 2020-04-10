@@ -306,7 +306,7 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
                 csvRow = CSV_READER[int(modeItem.whatsThis())]
                 timeOfRep = datetime.fromisoformat(csvRow['timeStamp'])
                 if timeOfRep > fromDT and timeOfRep < toDT \
-                and modeItem.text() in enabledModes:
+                   and modeItem.text() in enabledModes:
                     GT.showRow(row)
                 else:
                     GT.hideRow(row)
