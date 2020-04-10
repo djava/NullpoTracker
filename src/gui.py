@@ -101,6 +101,8 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
         self.FromDateTimeSelector.dateTimeChanged.connect(
             self.updateHiddenReplays)
 
+        self.hideIgnoredCheckBox.clicked.connect(self.updateHiddenReplays)
+
         self.MeanRadioButton.clicked.connect(
             self.meanRadioButtonClickedHandler)
         self.MedianRadioButton.clicked.connect(
@@ -282,34 +284,65 @@ class NullpoTrackerGui(QMainWindow, Ui_NullpoTracker):
 
         if dateRangeIndex <= DR_INDEXES.THIS_YEAR:
             for row in range(GT.rowCount()):
+                ignrItem = GT.itemFromIndex(GT.model().index(row, GTI.IGNORED))
                 modeItem = GT.itemFromIndex(GT.model().index(row, GTI.MODE))
                 csvRow = CSV_READER[int(modeItem.whatsThis())]
                 timeSinceGame = DT_NOW - datetime.fromisoformat(
                     csvRow['timeStamp'])
-                if timeSinceGame < INTERVAL_DT_DICT[dateRangeIndex] and \
-                   modeItem.text() in enabledModes:
-                    GT.showRow(row)
+                if self.hideIgnoredCheckBox.isChecked():
+                    if timeSinceGame < INTERVAL_DT_DICT[dateRangeIndex] and \
+                       modeItem.text() in enabledModes and \
+                       ignrItem.text() == '✓':
+                        GT.showRow(row)
+                    else:
+                        GT.hideRow(row)
                 else:
-                    GT.hideRow(row)
+                    if timeSinceGame < INTERVAL_DT_DICT[dateRangeIndex] and \
+                       modeItem.text() in enabledModes:
+                        GT.showRow(row)
+                    else:
+                        GT.hideRow(row)
         elif dateRangeIndex == DR_INDEXES.ALL_TIME:
-            for row in range(GT.rowCount()):
-                item = GT.itemFromIndex(GT.model().index(GTI.MODE, row))
-                if item.text() in enabledModes:
-                    GT.showRow(row)
-                else:
-                    GT.hideRow(row)
+            if self.hideIgnoredCheckBox.isChecked():
+                for row in range(GT.rowCount()):
+                    item = GT.itemFromIndex(GT.model().index(row, GTI.MODE))
+                    ignr = GT.itemFromIndex(GT.model().index(row, GTI.IGNORED))
+                    if item.text() in enabledModes and ignr.text() == '✓':
+                        GT.showRow(row)
+                    else:
+                        GT.hideRow(row)
+            else:
+                for row in range(GT.rowCount()):
+                    item = GT.itemFromIndex(GT.model().index(row, GTI.MODE))
+                    if item.text() in enabledModes:
+                        GT.showRow(row)
+                    else:
+                        GT.hideRow(row)
         elif dateRangeIndex == DR_INDEXES.CUSTOM:
             fromDT = self.FromDateTimeSelector.dateTime().toPyDateTime()
             toDT = self.ToDateTimeSelector.dateTime().toPyDateTime()
-            for row in range(GT.rowCount()):
-                modeItem = GT.itemFromIndex(GT.model().index(row, GTI.MODE))
-                csvRow = CSV_READER[int(modeItem.whatsThis())]
-                timeOfRep = datetime.fromisoformat(csvRow['timeStamp'])
-                if timeOfRep > fromDT and timeOfRep < toDT \
-                   and modeItem.text() in enabledModes:
-                    GT.showRow(row)
-                else:
-                    GT.hideRow(row)
+            if self.hideIgnoredCheckBox.isChecked():
+                for row in range(GT.rowCount()):
+                    ignr = GT.itemFromIndex(GT.model().index(row, GTI.IGNORED))
+                    mode = GT.itemFromIndex(GT.model().index(row, GTI.MODE))
+                    csvRow = CSV_READER[int(modeItem.whatsThis())]
+                    timeOfRep = datetime.fromisoformat(csvRow['timeStamp'])
+                    if timeOfRep > fromDT and timeOfRep < toDT \
+                       and mode.text() in enabledModes \
+                       and ignr.text() == '✓':
+                        GT.showRow(row)
+                    else:
+                        GT.hideRow(row)
+            else:
+                for row in range(GT.rowCount()):
+                    mode = GT.itemFromIndex(GT.model().index(row, GTI.MODE))
+                    csvRow = CSV_READER[int(mode.whatsThis())]
+                    timeOfRep = datetime.fromisoformat(csvRow['timeStamp'])
+                    if timeOfRep > fromDT and timeOfRep < toDT \
+                       and mode.text() in enabledModes:
+                        GT.showRow(row)
+                    else:
+                        GT.hideRow(row)
         self.reloadStatistics()
 
     def setModeSelectorButtonText(self):

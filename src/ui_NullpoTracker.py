@@ -294,8 +294,11 @@ class Ui_NullpoTracker(object):
         self.PercentileSpinBox.setObjectName("PercentileSpinBox")
         self.PercentileSpinBox.setSuffix('%')
         self.Settings = QtWidgets.QWidget(self.Window)
-        self.Settings.setGeometry(QtCore.QRect(10, 10, 791, 51))
+        self.Settings.setGeometry(QtCore.QRect(10, 10, 791, 61))
         self.Settings.setObjectName("Settings")
+        self.hideIgnoredCheckBox = QtWidgets.QCheckBox(self.Settings)
+        self.hideIgnoredCheckBox.setGeometry(QtCore.QRect(11, 40, 121, 21))
+        self.hideIgnoredCheckBox.setObjectName("hideIgnoredCheckBox")
         self.ModesEnabled = QtWidgets.QWidget(self.Settings)
         self.ModesEnabled.setGeometry(QtCore.QRect(10, 0, 221, 51))
         self.ModesEnabled.setObjectName("ModesEnabled")
@@ -542,6 +545,8 @@ class Ui_NullpoTracker(object):
         _translate = QtCore.QCoreApplication.translate
         NullpoTracker.setWindowTitle(
             _translate("NullpoTracker", "NullpoTracker"))
+        self.hideIgnoredCheckBox.setText(
+            _translate("NullpoTracker", "Hide Ignored Replays"))
         self.StatisticsLabel.setText(_translate("NullpoTracker", "Statistics"))
         self.MeanRadioButton.setText(_translate("NullpoTracker", "Mean"))
         self.MedianRadioButton.setText(_translate("NullpoTracker", "Median"))
